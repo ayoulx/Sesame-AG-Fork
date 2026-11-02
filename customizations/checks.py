@@ -17,8 +17,11 @@ PATCHES = os.path.join(ROOT, "customizations", "patches")
 
 TEXTUAL_SUFFIXES = (".kt", ".kts", ".xml", ".yml", ".yaml", ".pro", ".toml")
 
-# 补丁的对账基线必须是上游 tag，而不是 HEAD（HEAD 里已含补丁产物）。
+# 补丁的对账基线必须是上游基线，而不是 HEAD（HEAD 里已含补丁产物）。
 BASE_TAG = "4204-0.1.9"
+# tag 缺失时退回这个提交（tag 4204-0.1.9 就指向它）。
+# 远端仓库不挂 tag：GitHub 会把 tag 列在 Releases 区块里，容易被误认为发了版本。
+BASE_COMMIT = "4cf17c7461bf773836bb062aba06b4e217e52104"
 
 # 占位符只认「注释里的 TODO/FIXME/XXX」与 Kotlin 的 TODO() 调用；
 # 任务状态字面量（"TODO" -> ...）是业务值，不能算占位。
@@ -34,6 +37,32 @@ ORCHESTRATION_PREFIXES = (
 
 def _run(args: list[str]) -> str:
     return subprocess.run(args, cwd=ROOT, capture_output=True, text=True, check=True).stdout
+
+
+def _rev_ok(ref: str) -> bool:
+    proc = subprocess.run(
+        ["git", "rev-parse", "-q", "--verify", f"{ref}^{{commit}}"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+    )
+    return proc.returncode == 0
+
+
+def base_ref() -> str:
+    """补丁对账用的上游基线引用。
+
+    优先级：verify.sh 传下来的 FORK_BASE_REF → tag → 固定提交。
+    仓库里可能根本没有这个 tag（fork 默认不带 tag），所以必须能退回提交号，
+    否则对账会拿不到基线、把整份差异都算成「声明了但未产生改动」。
+    """
+    explicit = os.environ.get("FORK_BASE_REF", "").strip()
+    if explicit and _rev_ok(explicit):
+        return explicit
+    tag = os.environ.get("FORK_BASE_TAG", BASE_TAG)
+    if _rev_ok(f"refs/tags/{tag}"):
+        return f"refs/tags/{tag}"
+    return BASE_COMMIT
 
 
 def _state(name: str) -> list[str]:
@@ -78,7 +107,7 @@ def check_scope() -> tuple[bool, list[str]]:
     提交之后 status 就看不到它们了。这里改为与基线 tag 做 diff。
     """
     expected = declared()
-    base = os.environ.get("FORK_BASE_TAG", BASE_TAG)
+    base = base_ref()
     actual: set[str] = set()
     for line in _run(["git", "diff", "--name-only", base, "--", "app/"]).splitlines():
         path = line.strip()

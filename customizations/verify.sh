@@ -38,13 +38,22 @@ rm -rf customizations/.state
 # 用 HEAD 当基线会让补丁全部命中标记而跳过，自检就变成空转。
 # customizations/ 自身是补丁基础设施，这里不回滚。
 BASE_TAG="${FORK_BASE_TAG:-4204-0.1.9}"
-git rev-parse -q --verify "refs/tags/$BASE_TAG" >/dev/null || fail "基线 tag 不存在: $BASE_TAG"
-git checkout "$BASE_TAG" -- app/ || fail "无法还原上游基线 $BASE_TAG"
+# 基线定位：有 tag 就用 tag，没有就退回固定提交号。
+# 远端仓库刻意不挂 tag —— GitHub 会把 tag 列在 Releases 区块里，看着像发了版本。
+if git rev-parse -q --verify "refs/tags/$BASE_TAG" >/dev/null; then
+  BASE_REF="refs/tags/$BASE_TAG"
+else
+  BASE_REF="${FORK_BASE_COMMIT:-4cf17c7461bf773836bb062aba06b4e217e52104}"
+  git rev-parse -q --verify "$BASE_REF^{commit}" >/dev/null ||
+    fail "基线既没有 tag $BASE_TAG，也没有提交 $BASE_REF"
+fi
+export FORK_BASE_REF="$BASE_REF"
+git checkout "$BASE_REF" -- app/ || fail "无法还原上游基线 $BASE_REF"
 # app/src 下所有未跟踪文件都是补丁产物（payload 落盘），一并清理，避免维护白名单。
 git ls-files --others --exclude-standard -- app/src | while IFS= read -r extra; do
   rm -f "$extra"
 done
-echo "   基线已还原（$BASE_TAG）"
+echo "   基线已还原（$BASE_REF）"
 python customizations/checks.py snapshot || fail "无法记录行尾基线"
 
 echo "== 2/4 应用补丁（第一遍） =="

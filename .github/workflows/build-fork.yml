@@ -43,7 +43,8 @@ jobs:
         with:
           # versionCode 取提交数，必须是完整历史
           fetch-depth: 0
-          # fetch-depth: 0 只拉分支，不拉 tag；verify.sh 要靠上游基线 tag 还原源码
+          # 仓库里有基线 tag 就顺手拉到（verify.sh 优先用 tag 定位基线）；
+          # 远端不挂 tag 时 verify.sh 会退回固定提交号，所以这条不是必需，只是兜住两种情形。
           fetch-tags: true
 
       - name: 准备 JDK
