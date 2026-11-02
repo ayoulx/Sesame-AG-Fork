@@ -43,6 +43,8 @@ jobs:
         with:
           # versionCode 取提交数，必须是完整历史
           fetch-depth: 0
+          # fetch-depth: 0 只拉分支，不拉 tag；verify.sh 要靠上游基线 tag 还原源码
+          fetch-tags: true
 
       - name: 准备 JDK
         uses: actions/setup-java@v4
