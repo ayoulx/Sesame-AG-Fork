@@ -1,5 +1,6 @@
 package io.github.aoguai.sesameag.task.common
 
+import io.github.aoguai.sesameag.data.Status // [fork:todayflag:import]
 import io.github.aoguai.sesameag.hook.ApplicationHookConstants
 import io.github.aoguai.sesameag.util.GlobalThreadPools
 import io.github.aoguai.sesameag.util.RpcOfflineRisk
@@ -321,6 +322,10 @@ class TaskFlowEngine(
     private companion object {
         const val MAX_DYNAMIC_ROUND_LIMIT = 64
         const val DYNAMIC_ROUND_LIMIT_EXTRA = 6
+
+        // 「当日不可重试」的标记所属模块名。用 Module::Name 约定，
+        // Status 会按天清空，第二天自动重来一轮。// [fork:todayflag:const]
+        const val NON_RETRYABLE_FLAG_MODULE = "TaskFlow"
     }
 
     fun run(): TaskFlowRunResult {
@@ -444,6 +449,7 @@ class TaskFlowEngine(
             var skippedFailedCount = 0
             var skippedDeferredCount = 0
             var skippedNoProgressCount = 0
+            var skippedTodayBlockedCount = 0 // [fork:todayflag:count]
             var refreshRequested = false
             var noProgressConfirmationRefreshRequested = false
             val roundActions = mutableListOf<TaskFlowRoundAction>()
@@ -463,6 +469,12 @@ class TaskFlowEngine(
                 val action = candidate.initialAction
 
                 val actionKey = adapter.actionKey(item, action)
+                // 当日已被判定「不可重试」的动作直接跳过；领取奖励不拦，避免漏掉已就绪的奖励。
+                if (action != TaskFlowAction.RECEIVE && Status.hasFlagToday(todayBlockedFlag(actionKey))) {
+                    skippedTodayBlockedCount++
+                    roundActions.add(TaskFlowRoundAction("当日不可重试${action.logName}", item.title))
+                    continue
+                } // [fork:todayflag:check]
                 if (actionKey in failedActionKeys) {
                     skippedFailedCount++ // [fork:taskflow:skipfailed]
                     roundActions.add(TaskFlowRoundAction("跳过已失败${action.logName}", item.title))
@@ -555,6 +567,10 @@ class TaskFlowEngine(
                 logFailure(item, action, result, failureType, decision)
                 adapter.afterFailure(item, action, result, decision)
                 failedActionKeys.add(actionKey)
+                // 玩法本身没有 RPC 闭环（第三方 H5 / 小游戏），今天就不用再试了。
+                if (failureType == TaskRpcFailureType.UNKNOWN_NEEDS_REVIEW) {
+                    Status.setFlagToday(todayBlockedFlag(actionKey))
+                } // [fork:todayflag:write]
                 val shouldStopAfterFailure =
                     result.stopCurrentRound ||
                         decision == TaskFlowDecision.STOP_TODAY_OR_CURRENT_CHAIN ||
@@ -571,9 +587,9 @@ class TaskFlowEngine(
                 }
             }
 
-            if (skippedFailedCount + skippedDeferredCount + skippedNoProgressCount > 0) {
+            if (skippedFailedCount + skippedDeferredCount + skippedNoProgressCount + skippedTodayBlockedCount > 0) { // [fork:todayflag:sumcond]
                 adapter.logInfo(
-                    "${adapter.flowName}[本轮跳过：已失败 $skippedFailedCount 个 / 明确延后 $skippedDeferredCount 个 / 回查未确认 $skippedNoProgressCount 个]",
+                    "${adapter.flowName}[本轮跳过：已失败 $skippedFailedCount 个 / 明确延后 $skippedDeferredCount 个 / 回查未确认 $skippedNoProgressCount 个 / 当日不可重试 $skippedTodayBlockedCount 个]", // [fork:todayflag:summary]
                 )
             } // [fork:taskflow:skipsummary]
 
@@ -858,6 +874,15 @@ class TaskFlowEngine(
             visibleActions
         }
     }
+
+    /**
+     * 「当日不可重试」的动作标记名。
+     *
+     * 走 Status 的 Module::Name 约定，按天生效、跨会话保留；
+     * 带上流程名，避免两个模块的同名动作互相拦截。
+     */
+    private fun todayBlockedFlag(actionKey: String): String =
+        "$NON_RETRYABLE_FLAG_MODULE::blocked|${adapter.flowName}|$actionKey" // [fork:todayflag:flag]
 
     private fun decideFailure(failureType: TaskRpcFailureType): TaskFlowDecision =
         when (failureType) {
