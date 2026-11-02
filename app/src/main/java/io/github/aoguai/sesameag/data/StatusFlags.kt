@@ -80,6 +80,7 @@ object StatusFlags {
     const val FLAG_ANTFOREST_WHACK_MOLE_EXECUTED = "forest::whackMole::executed"
 
     /** 森林：保护地巡护机会兑换今日已达上限 */
+    const val FLAG_ANTFOREST_PATROL_TARGET = "AntForest::patrolTarget" // [fork:patrol:flag]
     const val FLAG_ANTFOREST_PATROL_CHANCE_EXCHANGE_LIMIT = "AntForest::exchangePatrolChanceLimit"
 
     /** 森林：每日换装已完成 */
@@ -333,6 +334,9 @@ object StatusFlags {
 
     /** 金豆夺宝：今日任务列表已确认无可执行项 */
     const val FLAG_ANTORCHARD_GOLDEN_BEAN_TASKS_DONE = "AntOrchard::goldenBeanTasksDone"
+
+    /** 金豆商城：兑换计数前缀，后接商品规格 id */
+    const val FLAG_GOLDEN_BEAN_MALL_EXCHANGE_COUNT_PREFIX = "AntOrchard::goldenBeanMallExchangeCount::" // [fork:goldenbeanmall:flag]
 
     /** 摇钱树：今日是否已收取金币树奖励 */
     const val FLAG_ANTORCHARD_MONEY_TREE_COLLECTED = "ANTORCHARD_MONEY_TREE_COLLECTED"

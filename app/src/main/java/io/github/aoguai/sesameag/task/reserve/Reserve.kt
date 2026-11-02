@@ -210,6 +210,61 @@ class Reserve : ModelTask() {
     companion object {
         private val TAG = Reserve::class.java.simpleName
 
+
+        /**
+         * 巡护证书兑换：每张地图一份证书。只在服务端明确可申请、且兑换后仍不低于
+         * [energyReserve] 时申请一次，避免把森林能量一次消耗到底。
+         */
+        internal fun exchangeCertificateOnce(projectId: String, itemName: String, energyReserve: Int): Boolean {
+            if (energyReserve < 0) return false
+            return try {
+                val raw = ReserveRpcCall.queryTreeForExchange(projectId)
+                val detail = JSONObject(raw).let { it.optJSONObject("resData") ?: it }
+                if (!ResChecker.checkRes(TAG, detail)) {
+                    Log.error(TAG, "保护证书资格查询失败[$itemName] raw=$detail")
+                    return false
+                }
+                val action = detail.optString("applyAction")
+                if (action != "AVAILABLE") {
+                    Log.forest("领保护地🏕️[$itemName]#当前不可申请[$action]")
+                    return false
+                }
+                val tree = detail.optJSONObject("exchangeableTree") ?: return false
+                if (tree.optBoolean("overLimit") || !tree.optBoolean("hasBudget", true)) {
+                    Log.forest("领保护地🏕️[$itemName]#已达上限或项目预算不足")
+                    return false
+                }
+                val cost = tree.optLong("energy", -1L)
+                val current = detail.optLong("currentEnergy", -1L)
+                if (cost < 0L || current < 0L) {
+                    Log.error(TAG, "保护证书能量信息无效[$itemName] raw=$detail")
+                    return false
+                }
+                if (current - cost < energyReserve) {
+                    Log.forest("领保护地🏕️[$itemName]#兑换后能量将低于保留值${energyReserve}g，跳过")
+                    return false
+                }
+                if (!Status.canReserveToday(projectId, 1)) {
+                    Log.forest("领保护地🏕️[$itemName]#今日申请次数已达上限")
+                    return false
+                }
+                val response = JSONObject(ReserveRpcCall.exchangeTree(projectId))
+                val body = response.optJSONObject("resData") ?: response
+                if (!ResChecker.checkRes(TAG, body)) {
+                    Log.error(TAG, "保护证书兑换失败[$itemName] raw=$body")
+                    return false
+                }
+                Status.reserveToday(projectId, 1)
+                val vitality = body.optInt("vitalityAmount", 0)
+                Log.forest("领保护地🏕️[$itemName]#兑换证书" + if (vitality > 0) "-活力值+$vitality" else "")
+                true
+            } catch (t: Throwable) {
+                Log.printStackTrace(TAG, "保护证书兑换异常[$itemName]:", t)
+                false
+            }
+        }
+        // [fork:patrol:reserve]
+
         @JvmStatic
         fun initReserve() {
             val reserveMap = IdMapManager.getInstance(ReserveaMap::class.java)

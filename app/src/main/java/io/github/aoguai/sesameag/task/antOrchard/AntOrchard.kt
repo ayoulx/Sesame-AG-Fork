@@ -10,6 +10,9 @@ import io.github.aoguai.sesameag.model.modelFieldExt.BooleanModelField
 import io.github.aoguai.sesameag.model.modelFieldExt.ChoiceModelField
 import io.github.aoguai.sesameag.model.modelFieldExt.FriendSelectionModelField
 import io.github.aoguai.sesameag.model.modelFieldExt.IntegerModelField
+import io.github.aoguai.sesameag.hook.ExchangeOptionsRefreshBridge // [fork:goldenbeanmall:import1]
+import io.github.aoguai.sesameag.model.modelFieldExt.SelectAndCountModelField // [fork:goldenbeanmall:import2]
+import io.github.aoguai.sesameag.task.exchange.ExchangeOptionsCache // [fork:goldenbeanmall:import3]
 import io.github.aoguai.sesameag.model.withDesc
 import io.github.aoguai.sesameag.task.ModelTask
 import io.github.aoguai.sesameag.task.common.DeferredReason
@@ -86,6 +89,8 @@ class AntOrchard : ModelTask() {
     internal lateinit var goldenBeanTreasure: BooleanModelField
     internal lateinit var orchardChouChouLe: BooleanModelField // [fork:orchardchou:holder]
     internal lateinit var goldenBeanManureExchangeDailyReserveAmount: IntegerModelField
+    internal lateinit var goldenBeanMallExchange: BooleanModelField // [fork:goldenbeanmall:holder]
+    internal lateinit var goldenBeanMallExchangeList: SelectAndCountModelField // [fork:goldenbeanmall:holder2]
     internal lateinit var orchardSpreadManureCountMain: IntegerModelField
     internal lateinit var orchardSpreadManureCountYeb: IntegerModelField
 
@@ -157,6 +162,21 @@ class AntOrchard : ModelTask() {
                 .withDesc(
                     "0 不自动换豆；正数为当天优先保留并兑换的肥料数量，统一自动施肥只使用扣除预留后的余额；-1 不设客户端上限，按服务端可兑换额度处理。任务自身要求的肥料消耗不受此项限制。余额、最低兑换量或每日额度不足时，本轮不预留也不换豆。需同时开启金豆夺宝主流程。",
                 ).also { goldenBeanManureExchangeDailyReserveAmount = it },
+        )
+        modelFields.addField(
+            BooleanModelField("goldenBeanMallExchange", "金豆商城 | 兑换", false)
+                .withDesc(
+                    "用金豆罐兑换下方所选商品规格；实付、外部下单或权益领取方式不明的商品只提醒不执行。",
+                ).also { goldenBeanMallExchange = it }, // [fork:goldenbeanmall:field]
+        )
+        modelFields.addField(
+            SelectAndCountModelField(
+                "goldenBeanMallExchangeList",
+                "金豆商城 | 商品规格与每日次数",
+                LinkedHashMap<String?, Int?>(),
+                { ExchangeOptionsCache.loadForSettingsCache(UserMap.currentUid, ExchangeOptionsRefreshBridge.TARGET_GOLDEN_BEAN_MALL) },
+                "选择商品规格并设置每日兑换次数；0 表示不限，仍遵守服务端额度。开启并执行一次后返回设置页可刷新出商品列表。",
+            ).also { goldenBeanMallExchangeList = it }, // [fork:goldenbeanmall:field2]
         )
         modelFields.addField(
             IntegerModelField("orchardSpreadManureCount", "果树 | 每日施肥次数", 0, -1, null)

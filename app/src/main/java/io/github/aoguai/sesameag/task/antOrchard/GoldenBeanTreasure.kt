@@ -303,7 +303,8 @@ private class GoldenBeanTaskFlowAdapter : TaskFlowAdapter {
     }
 }
 
-private object GoldenBeanTreasureSupport {
+// [fork:goldenbeanmall:support] 商城兑换复用同一套响应判定与失败归类
+internal object GoldenBeanTreasureSupport {
     private val unsupportedCodes = setOf("400000040")
     private val invalidCodes = setOf("20020012", "TASK_ID_INVALID", "ILLEGAL_ARGUMENT")
     private val retryableCodes = setOf("3000", "REMOTE_INVOKE_EXCEPTION")

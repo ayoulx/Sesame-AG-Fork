@@ -17,6 +17,8 @@ import io.github.aoguai.sesameag.model.Model
 import io.github.aoguai.sesameag.task.antFarm.AntFarm
 import io.github.aoguai.sesameag.task.antForest.AntForest
 import io.github.aoguai.sesameag.task.antMember.AntMember
+import io.github.aoguai.sesameag.task.antOrchard.AntOrchard // [fork:goldenbeanmall:dispatchimport]
+import io.github.aoguai.sesameag.task.antOrchard.refreshGoldenBeanMallOptionsForRemote // [fork:goldenbeanmall:dispatchimport2]
 import io.github.aoguai.sesameag.task.antSesameCredit.AntSesameCredit
 import io.github.aoguai.sesameag.task.antSports.AntSports
 import io.github.aoguai.sesameag.task.customTasks.CustomTask
@@ -599,6 +601,12 @@ internal object ApplicationBroadcastDispatcher {
                     ExchangeOptionsRefreshBridge.TARGET_SESAME_GRAIN -> {
                         Model.getModel(AntSesameCredit::class.java)?.refreshSesameGrainExchangeOptionsForRemote()
                             ?: return ExchangeOptionsRefreshResult(false, "芝麻信用模块未初始化", currentUserId)
+                    }
+
+                    ExchangeOptionsRefreshBridge.TARGET_GOLDEN_BEAN_MALL -> {
+                        // [fork:goldenbeanmall:dispatch]
+                        Model.getModel(AntOrchard::class.java)?.refreshGoldenBeanMallOptionsForRemote()
+                            ?: return ExchangeOptionsRefreshResult(false, "芭芭农场模块未初始化", currentUserId)
                     }
 
                     else -> {

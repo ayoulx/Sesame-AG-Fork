@@ -64,6 +64,17 @@ internal suspend fun AntOrchard.runOrchardRewardWorkflow(indexJson: JSONObject, 
         }
     }
 
+    // [fork:goldenbeanmall:flow] 商城兑换独立于主开关，放在金豆任务之后单独处理
+    if (goldenBeanMallExchange.value == true) {
+        try {
+            runGoldenBeanMallExchange()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.printStackTrace("GoldenBeanMall", "run err:", e)
+        }
+    }
+
     receiveMoneyTreeReward()
 
     if (!Status.hasFlagToday(StatusFlags.FLAG_ANTORCHARD_WIDGET_DAILY_AWARD)) {

@@ -174,6 +174,37 @@ internal object GoldenBeanRpcCall {
             },
         )
 
+    // [fork:goldenbeanmall:rpc] 金豆商城：兑换下单与订单查询
+    fun exchangeBenefit(spuId: String, skuId: String, requestId: String): String =
+        request(
+            "com.alipay.antcommonweal.exchange.h5.exchangeBenefit",
+            JSONObject().apply {
+                put("bizType", "MASTER")
+                put("requestId", requestId)
+                put("sceneCode", "ANTORCHARD_JINDOU_MALL")
+                put("skuId", skuId)
+                put("source", "MASTER")
+                put("spuId", spuId)
+                put("version", VERSION)
+            },
+        )
+
+    fun queryExchangeOrders(
+        pageNum: Int,
+        size: Int = 20,
+    ): String =
+        request(
+            "com.alipay.antcommonweal.exchange.h5.queryExchangeOrders",
+            JSONObject().apply {
+                put("bizType", "MASTER")
+                put("pageNum", pageNum)
+                put("sceneCode", "ANTORCHARD_JINDOU_MALL")
+                put("size", size)
+                put("source", "antorchard")
+                put("version", VERSION)
+            },
+        )
+
     fun listTopItemsByScene(): String =
         request(
             "com.alipay.antiep.listTopItemsByScene",

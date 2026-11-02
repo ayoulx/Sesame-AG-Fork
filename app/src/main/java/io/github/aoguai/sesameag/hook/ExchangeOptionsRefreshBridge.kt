@@ -33,6 +33,7 @@ object ExchangeOptionsRefreshBridge {
     const val TARGET_SPORTS_ENERGY = "sports_energy"
     const val TARGET_FOREST_VITALITY = "forest_vitality"
     const val TARGET_SESAME_GRAIN = "sesame_grain"
+    const val TARGET_GOLDEN_BEAN_MALL = "golden_bean_mall" // [fork:goldenbeanmall:target]
 
     data class RefreshResult(
         val success: Boolean,

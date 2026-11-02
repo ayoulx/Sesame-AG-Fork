@@ -68,7 +68,7 @@ object AntForestRpcCall {
 
     internal data class PropConsumeContext(
         val source: String,
-        val version: String,
+        val version: String = VERSION, // [fork:patrol:propversion] 巡护道具消费沿用森林版本
         val headers: Map<String, String>? = forestHeaders(source),
         val propGroup: String? = null,
     )
