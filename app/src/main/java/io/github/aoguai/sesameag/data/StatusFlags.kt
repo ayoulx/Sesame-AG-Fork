@@ -82,6 +82,12 @@ object StatusFlags {
     /** 森林：保护地巡护机会兑换今日已达上限 */
     const val FLAG_ANTFOREST_PATROL_CHANCE_EXCHANGE_LIMIT = "AntForest::exchangePatrolChanceLimit"
 
+    /** 森林：每日换装已完成 */
+    const val FLAG_ANTFOREST_DAILY_DRESS = "AntForest::dailyDress" // [fork:forestdress:flag]
+
+    /** 森林：无纸阅读今日已达收益上限 */
+    const val FLAG_ANTFOREST_READ_DONE = "AntForest::readDone" // [fork:forestread:flag]
+
     /** 森林：双击卡时间槽已消费到的索引 */
     const val FLAG_ANTFOREST_DOUBLE_CARD_TRIGGER_INDEX = "antForest::doubleCard::triggerIndex"
 
@@ -333,6 +339,9 @@ object StatusFlags {
 
     /** 农场好友助力：好友关系无效前缀 */
     const val FLAG_ANTORCHARD_ASSIST_RELATION_INVALID_PREFIX = "orchard::assistRelationInvalid::"
+
+    /** 农场抽抽乐：今日已探测过新一轮活动 */
+    const val FLAG_ANTORCHARD_DRAW_ACTIVITY_PROBED = "AntOrchard::drawActivityProbed" // [fork:orchardchou:flag]
 
     /** 福气鱼池：今日签到已处理 */
     const val FLAG_ANTFISHPOND_SIGN_DONE = "AntFishPond::signDone"

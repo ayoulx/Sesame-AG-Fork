@@ -43,6 +43,17 @@ internal suspend fun AntOrchard.runOrchardRewardWorkflow(indexJson: JSONObject, 
         receiveLeyuanDailyTaskAwards()
     }
 
+    // [fork:orchardchou:flow] 抽抽乐要读活动入口与剩余次数，放在常规任务之后独立处理
+    if (orchardChouChouLe.value == true) {
+        try {
+            runOrchardChouChouLe(userId)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.printStackTrace("OrchardChouChouLe", "run err:", e)
+        }
+    }
+
     if (goldenBeanTreasure.value == true) {
         try {
             runGoldenBeanTreasure()

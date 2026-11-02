@@ -1,6 +1,7 @@
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.Properties // [fork:build:import]
 import java.util.TimeZone
 
 plugins {
@@ -9,6 +10,19 @@ plugins {
     alias(libs.plugins.rikka.tools.refine)
 }
 var isCIBuild: Boolean = System.getenv("CI").toBoolean()
+
+// [fork:build:abi] 默认 arm64-v8a；-PforkAbis=all 出全 ABI，-PforkAbis=a,b 出指定 ABI
+val forkAbiProperty: String =
+    providers.gradleProperty("forkAbis").orNull?.trim()?.takeIf { it.isNotEmpty() } ?: "arm64-v8a"
+val forkAbis: List<String> =
+    if (forkAbiProperty == "all") {
+        listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+    } else {
+        forkAbiProperty.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+    }
+val forkUniversalApk: Boolean =
+    providers.gradleProperty("forkUniversalApk").orNull?.toBoolean() ?: false
+
 
 // isCIBuild = true // 没有c++源码时开启CI构建, push前关闭
 
@@ -20,13 +34,18 @@ android {
         jniLibs {
             useLegacyPackaging = true
         }
+        // [fork:build:dex] dex 走 legacy 压缩打包，APK 体积更小
+        dex {
+            useLegacyPackaging = true
+        }
     }
     splits {
         abi {
             isEnable = true
             reset()
-            include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
-            isUniversalApk = true
+            // [fork:build:splits] ABI 由 forkAbis 决定，默认单 ABI
+            include(*forkAbis.toTypedArray())
+            isUniversalApk = forkUniversalApk
         }
     }
     // 使用providers API来支持配置缓存
@@ -74,7 +93,8 @@ android {
         buildConfigField("String", "OFFICIAL_SIGNING_CERT_SHA256", "\"$officialSigningCertSha256\"")
         if (isCIBuild) {
             ndk {
-                abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64"))
+                // [fork:build:ndk] 与 splits 保持一致，避免打进了没被 split 的 ABI
+                abiFilters.addAll(forkAbis)
             }
         }
     }
@@ -100,6 +120,18 @@ android {
     signingConfigs {
         getByName("debug") {
         }
+        // [fork:build:signing] 固定签名：keystore/fork-release.properties 存在即启用
+        create("forkRelease") {
+            val propertiesFile = rootProject.file("keystore/fork-release.properties")
+            if (propertiesFile.exists()) {
+                val properties = Properties()
+                propertiesFile.inputStream().use { properties.load(it) }
+                storeFile = rootProject.file(properties.getProperty("storeFile", "keystore/fork-release.p12"))
+                storePassword = properties.getProperty("storePassword")
+                keyAlias = properties.getProperty("keyAlias")
+                keyPassword = properties.getProperty("keyPassword")
+            }
+        }
     }
 
     buildTypes {
@@ -116,7 +148,13 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            signingConfig = signingConfigs.getByName("debug")
+            // [fork:build:releaseSigning] 有固定密钥就用固定密钥，没有则回退 debug 签名
+            signingConfig =
+                if (rootProject.file("keystore/fork-release.properties").exists()) {
+                    signingConfigs.getByName("forkRelease")
+                } else {
+                    signingConfigs.getByName("debug")
+                }
         }
     }
 

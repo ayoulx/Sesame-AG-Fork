@@ -254,6 +254,12 @@ internal suspend fun AntForest.runForestHomeFollowUpWorkflow(
     }
 
 
+    // [fork:forestdress:flow] 每日换装放在抽抽乐之前，避免装扮任务被后续流程挤掉
+    if (forestDailyDress?.value == true) ForestDress.run()
+
+    // [fork:forestread:flow] 阅读靠持久化续接推进，这里只负责起一轮
+    if (forestRead?.value == true) runForestReadWorkflow()
+
     if (forestChouChouLe?.value == true) {
         ForestChouChouLe().chouChouLe()
         tc.countDebug("抽抽乐")

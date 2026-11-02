@@ -34,11 +34,11 @@ if [ -d customizations/.state ]; then
   done < <(cat customizations/.state/created-*.txt 2>/dev/null)
 fi
 rm -rf customizations/.state
-git checkout -- . || fail "无法还原被修改的上游文件"
+# 只还原补丁会碰的目录：customizations/ 自身是补丁基础设施，不能被这里回滚掉。
+git checkout -- app/ || fail "无法还原被修改的上游文件"
+# app/src 下所有未跟踪文件都是补丁产物（payload 落盘），一并清理，避免维护白名单。
 git ls-files --others --exclude-standard -- app/src | while IFS= read -r extra; do
-  case "$extra" in
-    */hook/captcha/*|*/util/ModuleSwitches.kt|*/content/CaptchaToolSection.kt) rm -f "$extra" ;;
-  esac
+  rm -f "$extra"
 done
 echo "   基线已还原"
 python customizations/checks.py snapshot || fail "无法记录行尾基线"

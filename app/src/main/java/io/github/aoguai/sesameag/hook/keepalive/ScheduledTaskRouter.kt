@@ -10,6 +10,9 @@ import io.github.aoguai.sesameag.hook.ApplicationHookCore
 import io.github.aoguai.sesameag.hook.ApplicationResumeCoordinator
 import io.github.aoguai.sesameag.model.Model
 import io.github.aoguai.sesameag.task.antFarm.AntFarm
+import io.github.aoguai.sesameag.task.antForest.AntForest // [fork:forestread:import]
+import io.github.aoguai.sesameag.task.antForest.FOREST_READ_CHILD_KIND // [fork:forestread:import2]
+import io.github.aoguai.sesameag.task.antForest.triggerPersistentReadTask // [fork:forestread:import3]
 import io.github.aoguai.sesameag.task.antForest.EnergyWaitingManager
 import io.github.aoguai.sesameag.task.antSports.AntSports
 import io.github.aoguai.sesameag.task.antStall.AntStall
@@ -292,6 +295,26 @@ object ScheduledTaskRouter {
                         RouteResult.FAILED
                     }
                 }
+            }
+            return routeResult(dispatchExecute(context, schedule, source, wakenAtTime = false, wakenTime = null))
+        }
+        if (childKind == FOREST_READ_CHILD_KIND) {
+            // [fork:forestread:route] 无纸阅读按章节续接，到点由这里接着读下一章
+            if (targetProcess) {
+                val forest = Model.getModel(AntForest::class.java)
+                if (forest != null) {
+                    if (!forest.isEnable()) {
+                        Log.record(TAG, "无纸阅读续接触发时模块已关闭，标记完成: ${schedule.name}")
+                        return RouteResult.SKIPPED
+                    }
+                    return if (forest.triggerPersistentReadTask(schedule.payloadJson, schedule.id, source)) {
+                        RouteResult.HANDLED
+                    } else {
+                        RouteResult.FAILED
+                    }
+                }
+                Log.record(TAG, "森林实例尚未就绪，延后无纸阅读续接: ${schedule.name}")
+                return RouteResult.DEFERRED
             }
             return routeResult(dispatchExecute(context, schedule, source, wakenAtTime = false, wakenTime = null))
         }

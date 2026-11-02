@@ -17,6 +17,10 @@ PATCHES = os.path.join(ROOT, "customizations", "patches")
 
 TEXTUAL_SUFFIXES = (".kt", ".kts", ".xml", ".yml", ".yaml", ".pro", ".toml")
 
+# 占位符只认「注释里的 TODO/FIXME/XXX」与 Kotlin 的 TODO() 调用；
+# 任务状态字面量（"TODO" -> ...）是业务值，不能算占位。
+PLACEHOLDER = re.compile(r"(?://|#|/\*|\*)\s*(?:TODO|FIXME|XXX)\b|\bTODO\(")
+
 # 这些路径属于 fork 自身的基础设施，不参与「补丁不许误伤上游」的对账
 ORCHESTRATION_PREFIXES = (
     "customizations/",
@@ -296,7 +300,11 @@ def check_payload() -> tuple[bool, list[str]]:
 
 
 def check_no_placeholders() -> tuple[bool, list[str]]:
-    """只看补丁新增的行：上游自带的 TODO 不是我们的债。"""
+    """只看补丁新增的上游行：上游自带的待办不是我们的债，基础设施文件也不参与。
+
+    占位判定落在注释或 ``TODO()`` 调用上：任务状态字面量（``"TODO" -> ...``）
+    是业务值，不算占位。
+    """
     bad = []
 
     diff = _run(["git", "diff", "-U0", "--no-color"])
@@ -305,7 +313,9 @@ def check_no_placeholders() -> tuple[bool, list[str]]:
         if line.startswith("+++ b/"):
             current = line[6:].strip()
         elif line.startswith("+") and not line.startswith("+++"):
-            if re.search(r"\b(TODO|FIXME|XXX)\b", line):
+            if current.startswith(ORCHESTRATION_PREFIXES):
+                continue
+            if PLACEHOLDER.search(line):
                 bad.append(f"{current}: {line[1:].strip()[:70]}")
 
     for rel in sorted(created()):
@@ -316,7 +326,7 @@ def check_no_placeholders() -> tuple[bool, list[str]]:
             continue
         with open(path, encoding="utf-8", errors="replace") as fp:
             for number, line in enumerate(fp, 1):
-                if re.search(r"\b(TODO|FIXME|XXX)\b", line):
+                if PLACEHOLDER.search(line):
                     bad.append(f"{rel}:{number} 残留 {line.strip()[:60]}")
 
     if bad:

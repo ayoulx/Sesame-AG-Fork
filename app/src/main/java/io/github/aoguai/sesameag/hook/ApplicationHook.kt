@@ -27,6 +27,7 @@ import io.github.aoguai.sesameag.entity.AlipayVersion
 import io.github.aoguai.sesameag.hook.Toast.show
 import io.github.aoguai.sesameag.hook.TokenHooker.start
 import io.github.aoguai.sesameag.hook.XposedEnv.processName
+import io.github.aoguai.sesameag.hook.captcha.CaptchaSolver // [fork:captcha:import]
 import io.github.aoguai.sesameag.hook.internal.AlipayMiniMarkHelper
 import io.github.aoguai.sesameag.hook.internal.AuthCodeHelper
 import io.github.aoguai.sesameag.hook.internal.LocationHelper
@@ -240,6 +241,8 @@ class ApplicationHook {
                     AuthCodeHelper.init(classLoader!!)
 
                     initVersionInfo(packageName)
+                    // [fork:captcha:install] 开关与版本门禁均在 CaptchaSolver 内部判定
+                    CaptchaSolver.install(classLoader!!)
                     if (VersionHook.hasVersion() && alipayVersion.compareTo(AlipayVersion("10.7.26.8100")) == 0) {
                         HookUtil.bypassAccountLimit(classLoader!!)
                     }

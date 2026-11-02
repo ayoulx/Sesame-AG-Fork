@@ -238,6 +238,9 @@ class AntForest : ModelTask(), EnergyCollectCallback {
     private var collectGiftBox: BooleanModelField? = null
     internal var medicalHealth: BooleanModelField? = null //医疗健康开关
     internal var forestMarket: BooleanModelField? = null
+    // [fork:forestdress:holder]
+    internal var forestDailyDress: BooleanModelField? = null // 每日随机换装
+    internal var forestRead: BooleanModelField? = null // 无纸阅读 [fork:forestread:holder]
     internal var combineAnimalPiece: BooleanModelField? = null
     private var consumeAnimalProp: BooleanModelField? = null
     private var whoYouWantToGiveTo: FriendSelectionModelField? = null
@@ -833,6 +836,12 @@ class AntForest : ModelTask(), EnergyCollectCallback {
         modelFields.addField(BooleanModelField("forestMarket", "森林集市", false).withDesc(
             "执行森林集市任务并领取奖励。"
         ).also { forestMarket = it })
+        modelFields.addField(BooleanModelField("forestDailyDress", "每日随机更换森林装扮", false).withDesc(
+            "从背包里挑一件未过期的装扮穿上，每个部位各一件，穿好回主页确认。"
+        ).also { forestDailyDress = it }) // [fork:forestdress:field]
+        modelFields.addField(BooleanModelField("forestRead", "无纸阅读", false).withDesc(
+            "在支付宝里读免费电子书攒森林能量；每章间隔六分钟，读满当日上限即停。"
+        ).also { forestRead = it }) // [fork:forestread:field]
         modelFields.addField(BooleanModelField("ecoLife", "绿色行动 | 开启", false).withDesc(
             "执行绿色行动任务。"
         ).also { ecoLife = it })

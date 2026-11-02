@@ -4,4 +4,7 @@ customizations/**/*.sh text eol=lf
 customizations/**/*.py text eol=lf
 .github/workflows/*.yml text eol=lf
 
+# payload 以 LF 维护：落盘时由 patchkit 统一转成仓库的 CRLF 约定。
+customizations/patches/payload/** text eol=lf
+
 # 上游源码保持仓库原有约定（core.autocrlf 决定工作区行尾），这里不干预。

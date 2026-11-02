@@ -1,6 +1,7 @@
 package io.github.aoguai.sesameag.task.antOrchard
 
 import io.github.aoguai.sesameag.hook.RequestManager
+import io.github.aoguai.sesameag.util.RandomUtil // [fork:orchardchou:import]
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -392,6 +393,96 @@ object AntOrchardRpcCall {
         )
 
     // 摇钱树收余额奖励
+    // [fork:orchardchou:rpc] 农场抽抽乐：活动入口、任务、余额同步与批量抽奖
+    fun enterDrawActivity(activityId: String = ""): String {
+        val requestData =
+            JSONObject().apply {
+                put("activityId", activityId)
+                put("context", JSONObject().put("appMode", "normal"))
+                put("requestType", "RPC")
+                put("sceneCode", "ANTORCHARD_DRAW_TIMES")
+                put("source", "antorchard")
+            }
+        return RequestManager.requestString(
+            "com.alipay.antiepdrawprod.enterDrawActivityantorchard",
+            JSONArray().put(requestData).toString(),
+        )
+    }
+
+    fun listDrawTasks(): String {
+        val requestData =
+            JSONObject().apply {
+                put("extend", JSONObject().put("appMode", "normal"))
+                put("requestType", "RPC")
+                put("sceneCode", "ANTORCHARD_DRAW_TIMES_TASK")
+                put("source", "antorchard")
+            }
+        return RequestManager.requestString(
+            "com.alipay.antieptask.listTaskantorchard",
+            JSONArray().put(requestData).toString(),
+        )
+    }
+
+    fun finishDrawTask(sceneCode: String, taskType: String): String {
+        val requestData =
+            JSONObject().apply {
+                put("outBizNo", "${taskType}_${System.currentTimeMillis()}_${RandomUtil.getRandomString(8)}")
+                put("sceneCode", sceneCode)
+                put("source", "antorchard")
+                put("taskType", taskType)
+            }
+        return RequestManager.requestString(
+            "com.alipay.antieptask.finishTaskantorchard",
+            JSONArray().put(requestData).toString(),
+        )
+    }
+
+    fun receiveDrawTaskAward(sceneCode: String, taskType: String): String {
+        val requestData =
+            JSONObject().apply {
+                put("ignoreLimit", true)
+                put("requestType", "RPC")
+                put("sceneCode", sceneCode)
+                put("source", "antorchard")
+                put("taskType", taskType)
+            }
+        return RequestManager.requestString(
+            "com.alipay.antieptask.receiveTaskAwardantorchard",
+            JSONArray().put(requestData).toString(),
+        )
+    }
+
+    fun syncDrawBalance(activityId: String): String {
+        val requestData =
+            JSONObject().apply {
+                put("activityId", activityId)
+                put("context", JSONObject().put("appMode", "normal"))
+                put("requestType", "RPC")
+                put("sceneCode", "ANTORCHARD_DRAW_TIMES")
+                put("source", "taskaward")
+            }
+        return RequestManager.requestString(
+            "com.alipay.antiepdrawprod.drawSyncantorchard",
+            JSONArray().put(requestData).toString(),
+        )
+    }
+
+    fun batchDraw(activityId: String, times: Int, userId: String): String {
+        val requestData =
+            JSONObject().apply {
+                put("activityId", activityId)
+                put("requestType", "RPC")
+                put("sceneCode", "ANTORCHARD_DRAW_TIMES")
+                put("source", "antorchard")
+                put("times", times)
+                put("userId", userId)
+            }
+        return RequestManager.requestString(
+            "com.alipay.antiepdrawprod.batchDrawantorchard",
+            JSONArray().put(requestData).toString(),
+        )
+    }
+
     fun moneyTreeTrigger(): String =
         RequestManager.requestString(
             "com.alipay.yebbffweb.needle.yebHome.moneyTree.trigger",

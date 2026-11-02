@@ -611,6 +611,32 @@ object AntForestRpcCall {
 
     @JvmStatic
     @Throws(JSONException::class)
+    // [fork:forestdress:rpc] 森林装扮：背包查询与穿戴
+    fun listUserDressForBackpack(positionType: String): String =
+        RequestManager.requestString(
+            "alipay.antforest.forest.h5.listUserDressForBackpack",
+            JSONArray()
+                .put(
+                    JSONObject()
+                        .put("pageQuery", false)
+                        .put("positionType", positionType)
+                        .put("source", HOME_TASK_SOURCE)
+                        .put("version", "20230501"),
+                ).toString(),
+        )
+
+    fun wearDress(dressTypeList: JSONArray): String =
+        RequestManager.requestString(
+            "alipay.antforest.forest.h5.wearDress",
+            JSONArray()
+                .put(
+                    JSONObject()
+                        .put("dressTypeList", dressTypeList)
+                        .put("outBizNo", UUID.randomUUID().toString())
+                        .put("source", HOME_TASK_SOURCE),
+                ).toString(),
+        )
+
     fun queryHomePage(source: String? = null): String {
         val actualSource = source ?: DEFAULT_SOURCE
         val requestObject =

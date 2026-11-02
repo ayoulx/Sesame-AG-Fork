@@ -84,6 +84,7 @@ class AntOrchard : ModelTask() {
     internal lateinit var receiveSevenDayGift: BooleanModelField
     internal lateinit var receiveOrchardTaskAward: BooleanModelField
     internal lateinit var goldenBeanTreasure: BooleanModelField
+    internal lateinit var orchardChouChouLe: BooleanModelField // [fork:orchardchou:holder]
     internal lateinit var goldenBeanManureExchangeDailyReserveAmount: IntegerModelField
     internal lateinit var orchardSpreadManureCountMain: IntegerModelField
     internal lateinit var orchardSpreadManureCountYeb: IntegerModelField
@@ -138,6 +139,12 @@ class AntOrchard : ModelTask() {
                 .withDesc(
                     "自动处理金豆夺宝的签到、已闭环任务、金猫矿工和金豆乐园抽奖；肥料换豆由单独的每日预留额度控制，商品兑换仅查询服务端状态。",
                 ).also { goldenBeanTreasure = it },
+        )
+        modelFields.addField(
+            BooleanModelField("orchardChouChouLe", "抽抽乐 | 自动完成与抽奖", false)
+                .withDesc(
+                    "自动完成芭芭农场抽抽乐的浏览与任务、领取机会，然后一次性抽完剩余次数。",
+                ).also { orchardChouChouLe = it }, // [fork:orchardchou:field]
         )
         modelFields.addField(
             IntegerModelField(
@@ -1363,7 +1370,7 @@ class AntOrchard : ModelTask() {
             .any { field -> refreshedTask.optInt(field) > previousTask.optInt(field) }
     }
 
-    private fun isOrchardRpcSuccessResponse(response: JSONObject): Boolean {
+    internal fun isOrchardRpcSuccessResponse(response: JSONObject): Boolean { // [fork:orchardchou:visible]
         if (response.optBoolean("success") || response.optBoolean("isSuccess")) {
             return true
         }
@@ -1466,7 +1473,8 @@ class AntOrchard : ModelTask() {
         }
     }
 
-    private fun buildOrchardTaskFailureResult(
+    // [fork:orchardchou:visible2]
+    internal fun buildOrchardTaskFailureResult(
         response: JSONObject,
         taskId: String,
         title: String,

@@ -179,6 +179,9 @@ fun SettingsContent(
                 )
             }
 
+            // [fork:toolui:section] 工具分组：滑块验证开关与提示
+            captchaToolSection()
+
             item {
                 Spacer(Modifier.height(8.dp))
                 Text(
