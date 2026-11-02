@@ -37,6 +37,30 @@ def _split_eol(text: str) -> tuple[str, str]:
     return text.replace("\r", "\n"), "\n"
 
 
+SOURCE_SUFFIXES = (".kt", ".kts", ".java", ".xml")
+
+
+def _existing_eol_near(dest: str) -> str:
+    """取目标文件邻近既有源文件的行尾风格。
+
+    不能写死 CRLF：仓库对象里存的是 LF（core.autocrlf=true 时提交即归一化），
+    Windows 检出成 CRLF、Linux 检出成 LF。新增文件必须跟随「当前检出环境」的
+    既有文件风格，否则本地能过、CI 一定报「内容与 payload 不一致」。
+    """
+    directory = os.path.dirname(dest)
+    while True:
+        if os.path.isdir(directory):
+            for name in sorted(os.listdir(directory)):
+                candidate = os.path.join(directory, name)
+                if os.path.isfile(candidate) and name.endswith(SOURCE_SUFFIXES):
+                    with open(candidate, "rb") as fp:
+                        return _split_eol(fp.read().decode("utf-8", "replace"))[1]
+        parent = os.path.dirname(directory)
+        if parent == directory:
+            return SOURCE_EOL
+        directory = parent
+
+
 class Editor:
     """按行尾无损、锚点唯一、带标记的方式编辑单个已存在的源文件。"""
 
@@ -126,23 +150,23 @@ class Patcher:
         if not os.path.isfile(src):
             raise PatchError(f"payload 缺失: {payload_name}")
         with open(src, "rb") as fp:
-            body = fp.read()
-
-        # payload 以 LF 维护，落盘时统一成仓库的 CRLF 约定，保证与上游源码风格一致。
-        body = _split_eol(body.decode("utf-8"))[0].replace("\n", SOURCE_EOL).encode("utf-8")
+            body = _split_eol(fp.read().decode("utf-8"))[0]
 
         dest = os.path.join(ROOT, rel_path)
         if os.path.isfile(dest):
             with open(dest, "rb") as fp:
-                if fp.read() == body:
+                # 比对只在 LF 归一化后进行：同一份内容在不同检出环境下行尾不同，
+                # 按字节比会把「换行风格差异」误判成「内容被外部改动」。
+                if _split_eol(fp.read().decode("utf-8"))[0] == body:
                     self.skipped += 1
                     self.created.add(rel_path)
                     return
             raise PatchError(f"{rel_path}: 已存在且内容与 payload 不一致，请先清理工作区")
 
+        eol = _existing_eol_near(dest)
         os.makedirs(os.path.dirname(dest), exist_ok=True)
         with open(dest, "wb") as fp:
-            fp.write(body)
+            fp.write(body.replace("\n", eol).encode("utf-8"))
         self.touched.add(rel_path)
         self.created.add(rel_path)
         self.written += 1
