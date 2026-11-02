@@ -104,12 +104,10 @@ NDK_ANCHOR = """        if (isCIBuild) {
             }
         }"""
 
-NDK_SNIPPET = """        if (isCIBuild) {
-            ndk {
-                // [fork:build:ndk] 与 splits 保持一致，避免打进了没被 split 的 ABI
-                abiFilters.addAll(forkAbis)
-            }
-        }"""
+NDK_SNIPPET = """        // [fork:build:ndk] 上游在 isCIBuild 下设 ndk { abiFilters = 4 个 ABI }，与上面的
+        // splits.abi.include 互斥（Gradle 会报 "cannot be present when splits abi filters are set"）。
+        // 本地 CI 变量未设置所以碰不到，CI 上 CI=true 必定炸，这里直接去掉；
+        // 打进哪些 ABI 一律由 forkAbis + splits 决定。"""
 
 
 def apply(patch):
