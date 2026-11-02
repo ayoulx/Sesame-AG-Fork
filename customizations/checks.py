@@ -19,9 +19,9 @@ TEXTUAL_SUFFIXES = (".kt", ".kts", ".xml", ".yml", ".yaml", ".pro", ".toml")
 
 # 补丁的对账基线必须是上游基线，而不是 HEAD（HEAD 里已含补丁产物）。
 BASE_TAG = "4204-0.1.9"
-# tag 缺失时退回这个提交（tag 4204-0.1.9 就指向它）。
+# tag 缺失时退回这个提交（tag 4204-0.1.9 指向的 commit，注意不是 tag 对象本身）。
 # 远端仓库不挂 tag：GitHub 会把 tag 列在 Releases 区块里，容易被误认为发了版本。
-BASE_COMMIT = "4cf17c7461bf773836bb062aba06b4e217e52104"
+BASE_COMMIT = "7dc173678891ba57ff07e1d45a2bf7d6d61a4e58"
 
 # 占位符只认「注释里的 TODO/FIXME/XXX」与 Kotlin 的 TODO() 调用；
 # 任务状态字面量（"TODO" -> ...）是业务值，不能算占位。

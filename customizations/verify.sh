@@ -43,7 +43,9 @@ BASE_TAG="${FORK_BASE_TAG:-4204-0.1.9}"
 if git rev-parse -q --verify "refs/tags/$BASE_TAG" >/dev/null; then
   BASE_REF="refs/tags/$BASE_TAG"
 else
-  BASE_REF="${FORK_BASE_COMMIT:-4cf17c7461bf773836bb062aba06b4e217e52104}"
+  # 注意用 tag 指向的 commit（7dc17367），不是 tag 对象（4cf17c74）：
+  # tag 对象只有在 tag 被拉取后才存在，CI 上没有 tag 就解析不到。
+  BASE_REF="${FORK_BASE_COMMIT:-7dc173678891ba57ff07e1d45a2bf7d6d61a4e58}"
   git rev-parse -q --verify "$BASE_REF^{commit}" >/dev/null ||
     fail "基线既没有 tag $BASE_TAG，也没有提交 $BASE_REF"
 fi
