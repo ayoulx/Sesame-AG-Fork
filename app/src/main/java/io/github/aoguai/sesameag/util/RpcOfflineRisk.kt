@@ -1,6 +1,7 @@
 package io.github.aoguai.sesameag.util
 
 import io.github.aoguai.sesameag.hook.ApplicationHookConstants
+import io.github.aoguai.sesameag.hook.HostBack // [fork:hostback:import]
 import org.json.JSONObject
 
 object RpcOfflineRisk {
@@ -84,6 +85,11 @@ object RpcOfflineRisk {
                 "auth_like",
                 detail,
             )
+            // 1009/系统繁忙 这类拦截通常伴随受限页面或验证码弹窗，退一步往往能回到正常页。
+            // 只在宿主应用自己的页面上模拟返回（见 HostBack），不做系统级输入注入。
+            if (ModuleSwitches.isHostBackOnRiskEnabled()) {
+                HostBack.pressBack("${code.ifBlank { "risk" }}/${message.ifBlank { "unknown" }}")
+            } // [fork:hostback:trigger]
         }
         return true
     }

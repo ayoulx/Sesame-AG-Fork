@@ -4,6 +4,7 @@ import SettingsSwitchItem
 import android.widget.Toast
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Gesture
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -48,6 +49,26 @@ fun LazyListScope.captchaToolSection() {
                         else -> "已关闭"
                     }
                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+            },
+        )
+    }
+
+    item {
+        val context = LocalContext.current
+        var hostBack by remember { mutableStateOf(ModuleSwitches.isHostBackOnRiskEnabled()) }
+        SettingsSwitchItem(
+            title = "风控时自动返回",
+            subtitle = "命中「1009/系统繁忙」这类拦截时，在目标应用里退一步回到正常页面；只在目标应用内生效，不操作其他应用",
+            icon = Icons.AutoMirrored.Rounded.ArrowBack,
+            checked = hostBack,
+            onCheckedChange = { value ->
+                val written = ModuleSwitches.setHostBackOnRiskEnabled(value)
+                hostBack = if (written) value else hostBack
+                Toast.makeText(
+                    context,
+                    if (written) "已保存" else "保存失败，请检查存储权限",
+                    Toast.LENGTH_SHORT,
+                ).show()
             },
         )
     }

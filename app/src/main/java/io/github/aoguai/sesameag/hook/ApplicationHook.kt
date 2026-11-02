@@ -233,6 +233,7 @@ class ApplicationHook {
                 ApplicationHookConstants.submitEntry("application_attach_init") {
                     ensureScheduler()
                     application?.let { PageStructureSnapshotter.install(it) }
+                    HostBack.attach(application) // [fork:hostback:attach]
                     RpcTrafficCapture.install(classLoader!!)
 
                     SecurityBodyHelper.init(classLoader!!)

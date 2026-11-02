@@ -15,8 +15,13 @@ object ModuleSwitches {
     private const val TAG = "ModuleSwitches"
     private const val FILE_NAME = "module_switches.json"
     private const val KEY_CAPTCHA_SOLVER = "captchaSolver"
+    private const val KEY_HOST_BACK_ON_RISK = "hostBackOnRisk"
 
-    private class Snapshot(val stamp: Long, val captchaSolver: Boolean)
+    private class Snapshot(
+        val stamp: Long,
+        val captchaSolver: Boolean,
+        val hostBackOnRisk: Boolean,
+    )
 
     @Volatile
     private var cached: Snapshot? = null
@@ -25,6 +30,9 @@ object ModuleSwitches {
 
     /** 滑块验证开关，默认关闭 */
     fun isCaptchaSolverEnabled(): Boolean = current().captchaSolver
+
+    /** 风控拦截时在宿主应用内模拟返回，默认开启（只在模块已进入离线、任务全停时触发） */
+    fun isHostBackOnRiskEnabled(): Boolean = current().hostBackOnRisk
 
     /**
      * 滑块开关的可读状态，供启动自检日志使用。
@@ -37,13 +45,23 @@ object ModuleSwitches {
         return "captchaSolver=${current().captchaSolver}, exists=${target.exists()}, file=${target.absolutePath}"
     }
 
-    fun setCaptchaSolverEnabled(enabled: Boolean): Boolean {
+    fun setCaptchaSolverEnabled(enabled: Boolean): Boolean = writeSwitch(KEY_CAPTCHA_SOLVER, enabled)
+
+    fun setHostBackOnRiskEnabled(enabled: Boolean): Boolean = writeSwitch(KEY_HOST_BACK_ON_RISK, enabled)
+
+    /**
+     * 写单个开关。
+     *
+     * 写完直接丢掉缓存而不是就地改 Snapshot：同一文件里有多个开关，
+     * 就地改容易漏掉别的字段，让另一个开关在本次进程里读到旧值。
+     */
+    private fun writeSwitch(key: String, enabled: Boolean): Boolean {
         synchronized(this) {
             val target = file()
             val root = readJson(target)
-            root.put(KEY_CAPTCHA_SOLVER, enabled)
+            root.put(key, enabled)
             val written = Files.write2File(root.toString(2), target)
-            cached = Snapshot(if (target.exists()) target.lastModified() else 0L, enabled)
+            cached = null
             return written
         }
     }
@@ -52,14 +70,21 @@ object ModuleSwitches {
         val target = file()
         val stamp = if (target.exists()) target.lastModified() else 0L
         cached?.let { if (it.stamp == stamp) return it }
-        val value =
-            try {
-                if (target.exists()) readJson(target).optBoolean(KEY_CAPTCHA_SOLVER, false) else false
-            } catch (t: Throwable) {
-                printStackTrace(TAG, "读取模块开关失败，按关闭处理", t)
-                false
+        var captchaSolver = false
+        var hostBackOnRisk = false
+        try {
+            if (target.exists()) {
+                val root = readJson(target)
+                captchaSolver = root.optBoolean(KEY_CAPTCHA_SOLVER, false)
+                // 这个开关默认开：文件里没写过也要生效，否则新装用户永远触发不到
+                hostBackOnRisk = root.optBoolean(KEY_HOST_BACK_ON_RISK, true)
+            } else {
+                hostBackOnRisk = true
             }
-        return Snapshot(stamp, value).also { cached = it }
+        } catch (t: Throwable) {
+            printStackTrace(TAG, "读取模块开关失败，按默认值处理", t)
+        }
+        return Snapshot(stamp, captchaSolver, hostBackOnRisk).also { cached = it }
     }
 
     private fun readJson(target: File): JSONObject =
