@@ -23,7 +23,7 @@ object ViewHierarchyAnalyzer {
             return null
         }
         val location = IntArray(2).also { slider.getLocationOnScreen(it) }
-        Log.debug(TAG, "滑块 ${slider.javaClass.simpleName} 位置=[${location[0]},${location[1]}] 尺寸=${slider.width}x${slider.height}")
+        Log.record(TAG, "滑块 ${slider.javaClass.simpleName} 位置=[${location[0]},${location[1]}] 尺寸=${slider.width}x${slider.height}")
         return slider
     }
 

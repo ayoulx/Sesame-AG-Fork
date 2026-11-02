@@ -26,6 +26,17 @@ object ModuleSwitches {
     /** 滑块验证开关，默认关闭 */
     fun isCaptchaSolverEnabled(): Boolean = current().captchaSolver
 
+    /**
+     * 滑块开关的可读状态，供启动自检日志使用。
+     *
+     * 只读、无副作用：开关文件缺失时按「关」返回，同时把路径与存在性一并带出来，
+     * 方便判断是「没写成功」还是「写到了别处」——两种情况在界面上一模一样。
+     */
+    fun describeCaptchaSwitch(): String {
+        val target = file()
+        return "captchaSolver=${current().captchaSolver}, exists=${target.exists()}, file=${target.absolutePath}"
+    }
+
     fun setCaptchaSolverEnabled(enabled: Boolean): Boolean {
         synchronized(this) {
             val target = file()

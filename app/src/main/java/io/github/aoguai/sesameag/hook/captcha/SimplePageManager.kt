@@ -86,7 +86,7 @@ object SimplePageManager {
                 result
             }
         } catch (t: Throwable) {
-            Log.printStackTrace(TAG, "挂钩验证码弹窗失败，自动过滑块不可用", t)
+            Log.record(TAG, "未找到验证码弹窗类（$CAPTCHA_DIALOG_CLASS），自动过滑块在本版本不可用: ${t.javaClass.simpleName}")
         }
     }
 
@@ -98,15 +98,15 @@ object SimplePageManager {
 
     private fun trigger(source: String) {
         val activity = topActivity ?: run {
-            Log.debug(TAG, "$source，但当前无顶层 Activity，跳过")
+            Log.record(TAG, "$source，但当前无顶层 Activity，跳过")
             return
         }
         val handler = handlers[activity.javaClass.name] ?: run {
-            Log.debug(TAG, "$source，但 ${activity.javaClass.name} 未注册处理器，跳过")
+            Log.record(TAG, "$source，但 ${activity.javaClass.name} 未注册处理器，跳过")
             return
         }
         if (busy) {
-            Log.debug(TAG, "$source，已有处理流程在跑，跳过重复触发")
+            Log.record(TAG, "$source，已有处理流程在跑，跳过重复触发")
             return
         }
         busy = true

@@ -35,7 +35,7 @@ fun LazyListScope.captchaToolSection() {
         var enabled by remember { mutableStateOf(ModuleSwitches.isCaptchaSolverEnabled()) }
         SettingsSwitchItem(
             title = "自动过滑块验证",
-            subtitle = "目标应用 ≤ ${CaptchaSolver.MAX_SUPPORTED_VERSION} 可用；开启后自动完成「向右滑动」验证，默认关闭，重启目标应用后生效",
+            subtitle = "目标应用 ≤ ${CaptchaSolver.MAX_SUPPORTED_VERSION} 可用；自动完成「向右滑动」验证，默认关闭，开关后立即生效，不必重启目标应用",
             icon = Icons.Rounded.Gesture,
             checked = enabled,
             onCheckedChange = { value ->
@@ -44,7 +44,7 @@ fun LazyListScope.captchaToolSection() {
                 val message =
                     when {
                         !written -> "保存失败，请检查存储权限"
-                        value -> "已开启，重启目标应用后生效"
+                        value -> "已开启，下一处验证码即生效"
                         else -> "已关闭"
                     }
                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
@@ -54,7 +54,15 @@ fun LazyListScope.captchaToolSection() {
 
     item {
         Text(
-            text = "滑块验证依赖界面自动化，页面改版或风控策略调整后可能失效；不开也能正常完成任务。",
+            text = "运行环境：靠 LSPosed 在宿主进程内直接派发触摸事件，不执行 root 命令、不需要 Shizuku、也不需要无障碍服务（模块本身仍要求 LSPosed / root 环境）。",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.outline,
+        )
+    }
+
+    item {
+        Text(
+            text = "排查：在「日志 - 全部日志」里搜「滑块」，能看到启动时的开关状态、开关文件位置，以及每次命中验证码的结果。页面改版或风控策略调整后可能失效；不开也能正常完成任务。",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.outline,
         )

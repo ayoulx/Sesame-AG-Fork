@@ -3,6 +3,7 @@ package io.github.aoguai.sesameag.hook.captcha
 import android.app.Activity
 import android.view.View
 import io.github.aoguai.sesameag.util.Log
+import io.github.aoguai.sesameag.util.ModuleSwitches
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlin.random.Random
@@ -17,6 +18,11 @@ import kotlin.random.Random
 class SlideCaptchaHandler : SimplePageManager.ActivityFocusHandler {
 
     override suspend fun handle(activity: Activity): Boolean {
+        // 开关在触发时判定，而不是挂钩时判定：用户随时可以关掉，不需要重启目标应用。
+        if (!ModuleSwitches.isCaptchaSolverEnabled()) {
+            Log.record(TAG, "检测到滑块验证，但开关未开启，本轮跳过")
+            return true
+        }
         if (!mutex.tryLock()) return true
         try {
             val anchor = SimplePageManager.findTopView(SLIDE_TEXT_XPATH)
@@ -31,7 +37,7 @@ class SlideCaptchaHandler : SimplePageManager.ActivityFocusHandler {
                 Log.error(TAG, "滑动坐标换算失败，放弃本轮")
                 return true
             }
-            Log.debug(TAG, "起点=[${coordinates.startX},${coordinates.startY}] 终点=[${coordinates.endX},${coordinates.endY}]")
+            Log.record(TAG, "起点=[${coordinates.startX},${coordinates.startY}] 终点=[${coordinates.endX},${coordinates.endY}]")
             MotionEventSimulator.swipe(
                 view = slider,
                 startX = coordinates.startX,

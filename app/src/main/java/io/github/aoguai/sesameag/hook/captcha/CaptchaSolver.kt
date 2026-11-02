@@ -30,10 +30,6 @@ object CaptchaSolver {
 
     fun install(classLoader: ClassLoader) {
         if (installed) return
-        if (!ModuleSwitches.isCaptchaSolverEnabled()) {
-            Log.debug(TAG, "开关未开启，不做滑块挂钩")
-            return
-        }
         val version = ApplicationHook.alipayVersion
         if (!isSupported(version)) {
             if (!unsupportedReported) {
@@ -47,7 +43,12 @@ object CaptchaSolver {
         val handler = SlideCaptchaHandler()
         SimplePageManager.addHandler(XRIVER_ACTIVITY, handler)
         SimplePageManager.addHandler(LAUNCHER_ACTIVITY, handler)
-        Log.record(TAG, "滑块验证已启用，目标应用版本 $version")
+        // 开关只决定「真的去滑」，不决定「要不要挂钩」。
+        // 挂钩本身很轻，跟着进程装好即可；这样在设置里开关后立刻生效，
+        // 不必重启目标应用——之前按开关提前 return，宿主已经跑起来时再打开就永远不会挂上。
+        val enabled = ModuleSwitches.isCaptchaSolverEnabled()
+        Log.record(TAG, "滑块验证已就绪，目标应用版本 $version；当前开关：${if (enabled) "开" else "关"}")
+        Log.record(TAG, "滑块开关来源：${ModuleSwitches.describeCaptchaSwitch()}")
     }
 
     fun isSupported(version: AlipayVersion): Boolean {
