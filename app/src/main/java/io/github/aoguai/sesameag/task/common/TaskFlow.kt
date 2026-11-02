@@ -338,6 +338,9 @@ class TaskFlowEngine(
         val deferredReasonCountsAny = linkedMapOf<DeferredReason, Int>()
         var failureCountAny = 0
         var tailFollowUpRefreshBudget = 1
+        // 服务端回查的预算：动作一直「成功但未确认进展」时必须能停下来，// [fork:taskflow:budget]
+        // 否则新任务键每轮都变，回查会一路重试到轮次上限（现场见过 64 轮空转）。
+        var noProgressRefreshBudget = 1
 
         while (round <= roundLimit) {
             if (adapter.isFlowHandledToday()) {
@@ -437,6 +440,10 @@ class TaskFlowEngine(
             val snapshot = buildSnapshot(items)
             var progressed = false
             var stopCurrentRound = false
+            // 逐条跳过日志改成轮末一条汇总，条数都在「刷新进度」里，不必各打一行 // [fork:taskflow:skipcount]
+            var skippedFailedCount = 0
+            var skippedDeferredCount = 0
+            var skippedNoProgressCount = 0
             var refreshRequested = false
             var noProgressConfirmationRefreshRequested = false
             val roundActions = mutableListOf<TaskFlowRoundAction>()
@@ -457,17 +464,17 @@ class TaskFlowEngine(
 
                 val actionKey = adapter.actionKey(item, action)
                 if (actionKey in failedActionKeys) {
-                    adapter.logInfo("${adapter.flowName}[本轮已跳过${action.logName}失败任务：${item.title}]")
+                    skippedFailedCount++ // [fork:taskflow:skipfailed]
                     roundActions.add(TaskFlowRoundAction("跳过已失败${action.logName}", item.title))
                     continue
                 }
                 if (actionKey in deferredActionKeys) {
-                    adapter.logInfo("${adapter.flowName}[本轮已跳过明确延后任务：${item.title}]")
+                    skippedDeferredCount++ // [fork:taskflow:skipdeferred]
                     roundActions.add(TaskFlowRoundAction("跳过已延后${action.logName}", item.title))
                     continue
                 }
                 if (actionKey in noProgressConfirmationActionKeys) {
-                    adapter.logInfo("${adapter.flowName}[回查后未确认进展，跳过重复${action.logName}：${item.title}]")
+                    skippedNoProgressCount++ // [fork:taskflow:skipnoprogress]
                     roundActions.add(TaskFlowRoundAction("跳过未确认进展${action.logName}", item.title))
                     continue
                 }
@@ -564,6 +571,12 @@ class TaskFlowEngine(
                 }
             }
 
+            if (skippedFailedCount + skippedDeferredCount + skippedNoProgressCount > 0) {
+                adapter.logInfo(
+                    "${adapter.flowName}[本轮跳过：已失败 $skippedFailedCount 个 / 明确延后 $skippedDeferredCount 个 / 回查未确认 $skippedNoProgressCount 个]",
+                )
+            } // [fork:taskflow:skipsummary]
+
             adapter.logInfo(
                 "${adapter.flowName}刷新进度[轮次:$round/$roundLimit]" +
                     "[处理前已完成:${snapshot.completedTasks}/${snapshot.totalTasks}]" +
@@ -597,8 +610,10 @@ class TaskFlowEngine(
 
             if (noProgressConfirmationRefreshRequested &&
                 !stopCurrentRound &&
-                !ApplicationHookConstants.isOffline()
+                !ApplicationHookConstants.isOffline() &&
+                noProgressRefreshBudget > 0
             ) {
+                noProgressRefreshBudget-- // [fork:taskflow:budgetuse]
                 val requiredRound = (round + 1).coerceAtMost(hardRoundLimit)
                 if (requiredRound > roundLimit) {
                     roundLimit = requiredRound

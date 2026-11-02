@@ -7,6 +7,7 @@ import io.github.aoguai.sesameag.task.antForest.AntForest
 import io.github.aoguai.sesameag.util.Files
 import io.github.aoguai.sesameag.util.JsonUtil
 import io.github.aoguai.sesameag.util.Log
+import io.github.aoguai.sesameag.util.LogFold // [fork:taskflow:statusimport]
 import io.github.aoguai.sesameag.util.TimeUtil
 import io.github.aoguai.sesameag.util.maps.UserMap
 import org.json.JSONObject
@@ -788,7 +789,9 @@ class Status {
             if (updateDay(nowCalendar)) {
                 Log.record(TAG, "重置 status.json")
             } else {
-                Log.record(TAG, "保存 status.json")
+                LogFold.tick("status_save", 20)?.let {
+                    Log.record(TAG, "保存 status.json（本次运行第 $it 次）")
+                } // [fork:taskflow:statussave]
             }
             val lastSaveTime = INSTANCE.saveTime
             try {
