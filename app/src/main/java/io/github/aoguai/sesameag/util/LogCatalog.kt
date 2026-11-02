@@ -3,7 +3,9 @@ package io.github.aoguai.sesameag.util
 enum class LogModuleDomain(val displayName: String) {
     COMMON("通用"),
     FOREST("蚂蚁森林"),
+    FOREST_PATROL("保护地巡护"), // [fork:logchan:domainpatrol]
     ORCHARD("芭芭农场"),
+    GOLDEN_BEAN("金豆夺宝"), // [fork:logchan:domaingolden]
     FARM("蚂蚁庄园"),
     STALL("蚂蚁新村"),
     OCEAN("神奇海洋"),
@@ -11,7 +13,6 @@ enum class LogModuleDomain(val displayName: String) {
     MEMBER("会员"),
     YOUTH_PRIVILEGE("青春特权"),
     MYBANK("网商银行"),
-    FISHPOND("福气鱼池"),
     SPORTS("运动"),
     GREEN_FINANCE("绿色经营"),
     SESAME_CREDIT("芝麻信用"),
@@ -98,6 +99,17 @@ enum class LogChannel(
         visibleInViewer = true,
         logTag = "森林"
     ),
+    FOREST_PATROL(
+        loggerName = "forest_patrol",
+        displayName = "保护地巡护日志",
+        moduleDomain = LogModuleDomain.FOREST_PATROL,
+        techKind = LogTechKind.BUSINESS,
+        description = "新旧巡护、动物能量与派遣、保护证书日志",
+        viewerGroup = LogViewerGroup.MODULES,
+        mirrorToRecord = true,
+        visibleInViewer = true,
+        logTag = "保护地巡护"
+    ), // [fork:logchan:channelpatrol]
     ORCHARD(
         loggerName = "orchard",
         displayName = "农场日志",
@@ -109,6 +121,17 @@ enum class LogChannel(
         visibleInViewer = true,
         logTag = "农场"
     ),
+    GOLDEN_BEAN(
+        loggerName = "golden_bean",
+        displayName = "金豆夺宝日志",
+        moduleDomain = LogModuleDomain.GOLDEN_BEAN,
+        techKind = LogTechKind.BUSINESS,
+        description = "金豆夺宝签到、任务、金猫矿工、金豆乐园与肥料换豆日志",
+        viewerGroup = LogViewerGroup.MODULES,
+        mirrorToRecord = true,
+        visibleInViewer = true,
+        logTag = "金豆夺宝"
+    ), // [fork:logchan:channelgolden]
     FARM(
         loggerName = "farm",
         displayName = "庄园日志",
@@ -185,17 +208,6 @@ enum class LogChannel(
         mirrorToRecord = true,
         visibleInViewer = true,
         logTag = "网商银行"
-    ),
-    FISHPOND(
-        loggerName = "fishpond",
-        displayName = "福气鱼池日志",
-        moduleDomain = LogModuleDomain.FISHPOND,
-        techKind = LogTechKind.BUSINESS,
-        description = "福气鱼池钓竿、任务、钓鱼与兑换进度相关日志",
-        viewerGroup = LogViewerGroup.MODULES,
-        mirrorToRecord = true,
-        visibleInViewer = true,
-        logTag = "福气鱼池"
     ),
     SPORTS(
         loggerName = "sports",
@@ -311,10 +323,20 @@ object LogCatalog {
             "Vitality",
             "WhackMole"
         ),
+        LogChannel.FOREST_PATROL to setOf(
+            "AntForestPatrol",
+            "AntForestPatrolRpcCall",
+            "LegacyPatrolWorkflow",
+            "MonopolyPatrolWorkflow"
+        ), // [fork:logchan:aliaspatrol]
         LogChannel.ORCHARD to setOf(
             "AntOrchard",
             "XLightRpcCall"
         ),
+        LogChannel.GOLDEN_BEAN to setOf(
+            "GoldenBeanTreasure",
+            "GoldenBeanMall"
+        ), // [fork:logchan:aliasgolden]
         LogChannel.FARM to setOf(
             "AntFarm",
             "AntFarmRpcCall",
@@ -341,9 +363,6 @@ object LogCatalog {
         ),
         LogChannel.MYBANK to setOf(
             "MyBankWelfare"
-        ),
-        LogChannel.FISHPOND to setOf(
-            "AntFishPond"
         ),
         LogChannel.SPORTS to setOf(
             "AntSports",

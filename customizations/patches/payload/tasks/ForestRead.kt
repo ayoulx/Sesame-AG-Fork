@@ -4,6 +4,7 @@ import io.github.aoguai.sesameag.data.Status
 import io.github.aoguai.sesameag.data.StatusFlags
 import io.github.aoguai.sesameag.hook.AccountSessionCoordinator
 import io.github.aoguai.sesameag.hook.ApplicationHook
+import io.github.aoguai.sesameag.hook.keepalive.PersistentLaunchPolicy
 import io.github.aoguai.sesameag.hook.keepalive.PersistentScheduleKind
 import io.github.aoguai.sesameag.hook.keepalive.PersistentScheduleRegistry
 import io.github.aoguai.sesameag.hook.keepalive.PersistentScheduleState
@@ -106,7 +107,13 @@ internal fun scheduleForestRead(triggerAtMs: Long) {
             sessionEpoch = epoch,
         )
     if (schedule.state != PersistentScheduleState.SCHEDULED) {
-        Log.error(TAG, "森林阅读续接注册失败: ${schedule.lastError}")
+        if (PersistentLaunchPolicy.isFrontLaunchDisabled(schedule.lastError)) {
+            // 「禁止系统调度前台拉起目标应用」开着时，这类计划本来就注册不上。
+            // 和森林蹲点保持一致的降级语义：仅进程存活时等待，不算错误。
+            Log.forest("无纸阅读续接已降级为仅进程存活时等待（禁止系统调度拉起目标应用）")
+        } else {
+            Log.error(TAG, "森林阅读续接注册失败: ${schedule.lastError}")
+        }
     }
 }
 

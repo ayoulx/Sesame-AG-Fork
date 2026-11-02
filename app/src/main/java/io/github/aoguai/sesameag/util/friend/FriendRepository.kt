@@ -143,15 +143,35 @@ object FriendRepository {
                 return@forEach
             }
             val profile = config.profiles[candidateId]
-            val shouldMarkRemoved = previousIds.contains(candidateId) || (
-                allowPruneMissing &&
+            // [fork:friendprune:allow] 与上游 0.2.6 对齐：只有显式 allowPruneMissing 才允许剪枝。
+            // 原来 previousIds 命中即可剪，调用方漏传参数时会把好友整片误判成失效。
+            val shouldMarkRemoved = allowPruneMissing && (
+                previousIds.contains(candidateId) || (
                     profile != null &&
-                    profile.relation != FriendRelation.UNKNOWN &&
-                    profile.relation != FriendRelation.SELF
+                        profile.relation != FriendRelation.UNKNOWN &&
+                        profile.relation != FriendRelation.SELF
+                    )
                 )
             if (shouldMarkRemoved) {
                 removedIds.add(candidateId)
             }
+        }
+
+        // [fork:friendprune:guard] 一次同步要把超过一半的有效好友判成失效，几乎只能是
+        // 好友快照不完整（目标应用社交库尚未加载完）。这种情况宁可不剪，也不要把整片好友标死。
+        val validProfileCount =
+            config.profiles.values.count {
+                !it.removed &&
+                    it.relation != FriendRelation.UNKNOWN &&
+                    it.relation != FriendRelation.SELF
+            }
+        if (validProfileCount >= 5 && removedIds.size * 2 > validProfileCount) {
+            Log.runtime(
+                TAG,
+                "好友剪枝已拦截：待失效 ${removedIds.size} 个 / 现有有效 $validProfileCount 个，" +
+                    "疑似好友快照不完整，保留原有关系"
+            )
+            removedIds.clear()
         }
 
         for ((friendUserId, entity) in currentUsers) {
@@ -174,6 +194,47 @@ object FriendRepository {
         Log.runtime(TAG, "好友中心刷新完成: profiles=${config.profiles.size}, groups=${config.groups.size}")
         return config
     }
+
+    /**
+     * 用当前好友快照重算关系，但绝不剪枝。
+     *
+     * 只做两件事：把快照里出现的人补进好友中心、按最新 friendStatus 重算关系。
+     * 快照里没出现的人一律保持原状——他们可能只是目标应用社交库还没加载完。
+     *
+     * 每日同步跑过之后仍需要调用它：剪枝留下的 REMOVED 标记不会自己消失，
+     * 而同步入口当天已经关闭，不在这里补一刀，误判的好友要挂到第二天。
+     *
+     * @return 关系被改写（含从 REMOVED 恢复）的好友数量
+     */
+    @JvmStatic
+    @Synchronized
+    fun refreshRelationsFromSnapshot(userId: String? = UserMap.currentUid): Int {
+        val safeUserId = userId?.trim().orEmpty()
+        if (safeUserId.isEmpty()) return 0
+        val currentUsers = UserMap.getUserMap()
+        if (currentUsers.isEmpty()) return 0
+        val config = current(safeUserId)
+        var changed = 0
+        for ((friendUserId, entity) in currentUsers) {
+            val normalizedId = friendUserId.trim()
+            if (normalizedId.isEmpty() || normalizedId == safeUserId) continue
+            val profile = config.profiles[normalizedId] ?: FriendProfile(userId = normalizedId)
+            val beforeRemoved = profile.removed
+            val beforeRelation = profile.relation
+            applyUserEntity(profile, entity, safeUserId)
+            config.profiles[normalizedId] = profile
+            if (beforeRemoved || beforeRelation != profile.relation) {
+                changed++
+            }
+        }
+        if (changed > 0) {
+            pruneGroups(config)
+            save(safeUserId, config)
+            Log.runtime(TAG, "好友关系已按当前快照重算: $changed 个变化，profiles=${config.profiles.size}")
+        }
+        return changed
+    }
+    // [fork:friendheal:repo]
 
     @JvmStatic
     fun listProfiles(userId: String? = UserMap.currentUid): List<FriendProfile> {

@@ -112,6 +112,73 @@ class Editor:
         old_n = _split_eol(anchor)[0]
         return self.replace(old_n, _split_eol(snippet)[0] + old_n, name)
 
+    def drop(self, old: str, name: str) -> "Editor":
+        """原地删掉一段原文（幂等）。
+
+        删除没法在文件里留 ``[fork:tag:name]`` 标记——留了就不叫删干净了。
+        所以幂等改由 .state/dropped-<tag>.txt 记录：同一次运行的第二遍能认出来，
+        如果基线被重新还原导致原文又出现，也会再删一次。
+        """
+        old_n = _split_eol(old)[0]
+        record = os.path.join(STATE_DIR, f"dropped-{self.tag}.txt")
+        applied: set[str] = set()
+        if os.path.isfile(record):
+            with open(record, encoding="utf-8") as fp:
+                applied = {line.strip() for line in fp if line.strip()}
+
+        if name in applied:
+            if old_n in self.text:
+                self.text = self.text.replace(old_n, "", 1)
+                self.written += 1
+            else:
+                self.skipped += 1
+            return self
+
+        hits = self.text.count(old_n)
+        if hits != 1:
+            head = old_n.strip().splitlines()[0][:80]
+            raise PatchError(f"{self.display}: 待删片段 [{name}] 命中 {hits} 次（要求恰好 1 次）: {head!r}")
+        self.text = self.text.replace(old_n, "", 1)
+        self.written += 1
+        os.makedirs(STATE_DIR, exist_ok=True)
+        with open(record, "a", encoding="utf-8", newline="\n") as fp:
+            fp.write(name + "\n")
+        return self
+
+    def replace_all(self, old: str, new: str, name: str) -> "Editor":
+        """全文机械改名（同一片段在文件里重复出现时用）。
+
+        ``replace`` 要求锚点唯一，遇到「一个文件里 19 处 ``Log.orchard(`` 要
+        统一改名」这种就没法用：逐一写锚点既啰嗦又容易漂移。这里整篇替换，
+        幂等判据改成「原文已不再出现」——记在 .state/replaced-<tag>.txt 里。
+
+        与 ``drop`` 同源：不留 ``[fork:...]`` 标记（改名留标记会污染调用点），
+        幂等靠状态文件，基线被还原导致原文回来时会再替换一次。
+        """
+        old_n = _split_eol(old)[0]
+        new_n = _split_eol(new)[0]
+        if old_n in new_n:
+            raise PatchError(f"{self.display}: [{name}] 新内容仍包含原文，会无限替换")
+        record = os.path.join(STATE_DIR, f"replaced-{self.tag}.txt")
+        applied: set[str] = set()
+        if os.path.isfile(record):
+            with open(record, encoding="utf-8") as fp:
+                applied = {line.strip() for line in fp if line.strip()}
+
+        hits = self.text.count(old_n)
+        if name in applied and hits == 0:
+            self.skipped += 1
+            return self
+        if hits == 0:
+            raise PatchError(f"{self.display}: 待替换片段 [{name}] 命中 0 次")
+        self.text = self.text.replace(old_n, new_n)
+        self.written += hits
+        if name not in applied:
+            os.makedirs(STATE_DIR, exist_ok=True)
+            with open(record, "a", encoding="utf-8", newline="\n") as fp:
+                fp.write(name + "\n")
+        return self
+
     def save(self) -> None:
         if self.written == 0:
             return
@@ -130,6 +197,7 @@ class Patcher:
         self.tag = tag
         self.touched: set[str] = set()
         self.created: set[str] = set()
+        self.removed: set[str] = set()
         self.written = 0
         self.skipped = 0
         self._editors: dict[str, Editor] = {}
@@ -171,6 +239,40 @@ class Patcher:
         self.created.add(rel_path)
         self.written += 1
 
+    def remove_file(self, rel_path: str) -> None:
+        """删除一个上游文件（幂等：文件已不在就算已应用）。
+
+        上游后续版本删掉的模块，这里同步删掉，而不是留着死代码。
+        删除清单写进 .state/removed-<tag>.txt，供 checks.py 计入声明集合——
+        否则「相对基线的差异」里会多出一批没人认领的删除。
+        """
+        dest = os.path.join(ROOT, rel_path)
+        if not os.path.isfile(dest):
+            self.skipped += 1
+            self.removed.add(rel_path)
+            self._prune_empty_dirs(os.path.dirname(dest))
+            return
+        os.remove(dest)
+        self.removed.add(rel_path)
+        self.written += 1
+        self._prune_empty_dirs(os.path.dirname(dest))
+
+    @staticmethod
+    def _prune_empty_dirs(directory: str) -> None:
+        """删文件后顺手清掉空目录。
+
+        git 不跟踪空目录，但工作区里会留下 ``task/antFishPond/`` 这种空壳，
+        既看着像漏删，也会让 IDE 显示一个空包。只删确实空的目录，
+        且不越过源码根，避免误删其他空目录。
+        """
+        stop = os.path.normpath(os.path.join(ROOT, "app", "src", "main"))
+        directory = os.path.normpath(directory)
+        while directory != stop and directory.startswith(stop):
+            if not os.path.isdir(directory) or os.listdir(directory):
+                return
+            os.rmdir(directory)
+            directory = os.path.dirname(directory)
+
     def finish(self) -> int:
         for editor in self._editors.values():
             editor.save()
@@ -181,7 +283,7 @@ class Patcher:
 
         os.makedirs(STATE_DIR, exist_ok=True)
         # 与已有记录取并集：第二遍执行没有新写入，不能把第一遍的声明覆盖成空。
-        for prefix, items in (("touched", self.touched), ("created", self.created)):
+        for prefix, items in (("touched", self.touched), ("created", self.created), ("removed", self.removed)):
             record = os.path.join(STATE_DIR, f"{prefix}-{self.tag}.txt")
             previous = set()
             if os.path.isfile(record):

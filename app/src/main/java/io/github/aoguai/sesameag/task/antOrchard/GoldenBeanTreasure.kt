@@ -171,7 +171,7 @@ private class GoldenBeanTaskFlowAdapter : TaskFlowAdapter {
             return false
         }
         if (loggedDeferredTaskIds.add(item.id)) {
-            Log.orchard(
+            Log.goldenBean(
                 "金豆夺宝任务⏭️[taskId=${item.id} actionType=${item.actionType.ifBlank { "UNKNOWN" }} " +
                     "sceneCode=${item.sceneCode.ifBlank { "UNKNOWN" }}] 未捕获主动动作，仅保留服务端状态",
             )
@@ -240,7 +240,7 @@ private class GoldenBeanTaskFlowAdapter : TaskFlowAdapter {
 
     override fun onAllTasksDone(snapshot: TaskFlowSnapshot) {
         Status.setFlagToday(StatusFlags.FLAG_ANTORCHARD_GOLDEN_BEAN_TASKS_DONE)
-        Log.orchard("金豆夺宝任务列表已无可自动推进或待领取任务")
+        Log.goldenBean("金豆夺宝任务列表已无可自动推进或待领取任务")
     }
 
     override fun onQueryFailed(response: JSONObject) {
@@ -248,7 +248,7 @@ private class GoldenBeanTaskFlowAdapter : TaskFlowAdapter {
     }
 
     override fun logInfo(message: String) {
-        Log.orchard(message)
+        Log.goldenBean(message)
     }
 
     override fun logError(message: String) {
@@ -357,7 +357,7 @@ internal object GoldenBeanTreasureSupport {
                 }
             }
 
-        Log.orchard(
+        Log.goldenBean(
             "金豆夺宝肥料换豆预留资格 farmOpened=$farmOpened " +
                 "pageOpened=$pageOpened " +
                 "taobaoBinding=$taobaoBinding " +
@@ -370,7 +370,7 @@ internal object GoldenBeanTreasureSupport {
         )
 
         if (!farmOpened || !pageOpened || !taobaoBinding) {
-            Log.orchard("金豆夺宝肥料换豆[BUSINESS_LIMIT] 服务端资格未满足")
+            Log.goldenBean("金豆夺宝肥料换豆[BUSINESS_LIMIT] 服务端资格未满足")
             return null
         }
         if (minExchangeAmount <= 0) {
@@ -381,13 +381,13 @@ internal object GoldenBeanTreasureSupport {
             return null
         }
         if (reservedManure <= 0) {
-            Log.orchard("金豆夺宝肥料换豆[USER_LIMIT] 今日配置额度已用完")
+            Log.goldenBean("金豆夺宝肥料换豆[USER_LIMIT] 今日配置额度已用完")
             return null
         }
         if (reservedManure < minExchangeAmount) {
             val classification =
                 if (configuredDailyReserveAmount > 0) "USER_CONFIGURATION" else "BUSINESS_LIMIT"
-            Log.orchard(
+            Log.goldenBean(
                 "金豆夺宝肥料换豆[$classification] 预留${reservedManure}低于服务端最小兑换量$minExchangeAmount，本轮不预留也不换豆",
             )
             return null
@@ -396,7 +396,7 @@ internal object GoldenBeanTreasureSupport {
             effectiveExchangeManure < reservedManure ||
             remainQuota < reservedManure
         ) {
-            Log.orchard(
+            Log.goldenBean(
                 "金豆夺宝肥料换豆[USER_RESERVE_UNMET] 当前肥料或服务端可兑换额度不足预留$reservedManure，" +
                     "本轮不预留也不换豆",
             )
@@ -424,7 +424,7 @@ internal object GoldenBeanTreasureSupport {
         val remainQuota = exchangeInfo.optInt("remainQuota", 0)
 
         if (!farmOpened || !pageOpened || !taobaoBinding) {
-            Log.orchard("金豆夺宝肥料换豆[BUSINESS_LIMIT] 最终回查资格未满足")
+            Log.goldenBean("金豆夺宝肥料换豆[BUSINESS_LIMIT] 最终回查资格未满足")
             return
         }
         if (minExchangeAmount <= 0) {
@@ -439,7 +439,7 @@ internal object GoldenBeanTreasureSupport {
             effectiveExchangeManure < plan.reservedManure ||
             remainQuota < plan.reservedManure
         ) {
-            Log.orchard(
+            Log.goldenBean(
                 "金豆夺宝肥料换豆[BUSINESS_LIMIT] 最终回查无法满足预留${plan.reservedManure}，不发送兑换请求",
             )
             return
@@ -477,7 +477,7 @@ internal object GoldenBeanTreasureSupport {
                         "服务端已确认状态推进但缺少可计量肥料消耗 raw=$syncResponse",
                 )
             }
-            Log.orchard(
+            Log.goldenBean(
                 "金豆夺宝肥料兑换成功并完成服务端回查 amount=${plan.reservedManure} " +
                     "manureCost=${confirmedManureCost ?: "UNKNOWN"} " +
                     "remainManure=${afterInfo?.optInt("currentManure", -1)} " +
@@ -643,7 +643,7 @@ internal object GoldenBeanTreasureSupport {
                 GoldenBeanRpcCall.sync(listOf("JAR_INFO", "SIGN", "MARKETING_POPUP", "TASK_LIST")),
             )
             if (isTodaySigned(syncResponse)) {
-                Log.orchard("金豆夺宝签到成功 signKey=$signKey")
+                Log.goldenBean("金豆夺宝签到成功 signKey=$signKey")
             } else {
                 Log.error(GOLDEN_BEAN_BLACKLIST_MODULE, "金豆夺宝签到未通过服务端状态确认 raw=${syncResponse ?: "EMPTY"}")
             }
@@ -726,7 +726,7 @@ internal object GoldenBeanTreasureSupport {
         }
         val quotaCanUse = beforeRights.optInt("quotaCanUse", 0)
         if (quotaCanUse <= 0) {
-            Log.orchard("金豆乐园抽奖[服务端无可用次数]")
+            Log.goldenBean("金豆乐园抽奖[服务端无可用次数]")
             return
         }
 
@@ -755,7 +755,7 @@ internal object GoldenBeanTreasureSupport {
             )
             return
         }
-        Log.orchard("金豆乐园抽奖回查 quotaCanUse=$quotaCanUse->$afterQuota usedQuota=$usedQuota")
+        Log.goldenBean("金豆乐园抽奖回查 quotaCanUse=$quotaCanUse->$afterQuota usedQuota=$usedQuota")
     }
 
     fun runMiner() {
@@ -770,7 +770,7 @@ internal object GoldenBeanTreasureSupport {
             return
         }
         if (!indexResponse.optBoolean("enabled", false)) {
-            Log.orchard("金猫矿工[服务端未启用]")
+            Log.goldenBean("金猫矿工[服务端未启用]")
             return
         }
 
@@ -787,7 +787,7 @@ internal object GoldenBeanTreasureSupport {
             return
         }
         if (!taskProgress.optBoolean("canGrab", false)) {
-            Log.orchard("金猫矿工[服务端无可抓取次数]")
+            Log.goldenBean("金猫矿工[服务端无可抓取次数]")
             return
         }
 
@@ -828,7 +828,7 @@ internal object GoldenBeanTreasureSupport {
                 return
             }
             if (grabResponse.optBoolean("needAd", false)) {
-                Log.orchard("金猫矿工[服务端要求广告，保留待人工处理]")
+                Log.goldenBean("金猫矿工[服务端要求广告，保留待人工处理]")
                 return
             }
 
@@ -868,7 +868,7 @@ internal object GoldenBeanTreasureSupport {
             Log.error(GOLDEN_BEAN_BLACKLIST_MODULE, "金猫矿工最终回查缺少可抓取状态 raw=$finalResponse")
             return
         }
-        Log.orchard(
+        Log.goldenBean(
             "金猫矿工最终回查 canGrab=${finalProgress.optBoolean("canGrab", false)} " +
                 "remainingTimes=${finalProgress.optInt("remainingTimes", -1)}",
         )
@@ -886,7 +886,7 @@ internal object GoldenBeanTreasureSupport {
                     .ifBlank { item.optString("id") }
             val firstSku = item.optJSONArray("skuModelList")?.optJSONObject(0)
             val minPrice = item.optJSONObject("minPrice")
-            Log.orchard(
+            Log.goldenBean(
                 "金豆夺宝商城[${listType}只读] itemId=${itemId.ifBlank { "UNKNOWN" }} " +
                     "itemStatus=${item.optString("itemStatus").ifBlank { "UNKNOWN" }} " +
                     "skuId=${firstSku?.optString("skuId").orEmpty().ifBlank { "UNKNOWN" }} " +

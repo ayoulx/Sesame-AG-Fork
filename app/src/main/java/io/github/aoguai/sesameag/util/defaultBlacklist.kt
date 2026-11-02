@@ -324,31 +324,6 @@ private val forestDefaultBlacklist =
         "通过5关",
     )
 
-private val fishPondDefaultBlacklist =
-    setOf(
-        // 福气鱼池：游戏、订阅、分享、翻倍广告等任务缺少稳定自动完成闭环
-        "FISHPOND_NCLY_GAME",
-        "NORMAL_RENMENYOUXI",
-        "TASK_SUBSCRIBE",
-        "ANTFISHPOND_WECHAT_SHARE",
-        "LOTTERY_PLUS",
-        "RESCUE_AD",
-        "RESULT_DOUBLE_AD",
-        "FLOAT_GAME_AD",
-        "玩保卫向日葵30s",
-        "玩三国冰河时代30s",
-        "农场对对碰匹配5组",
-        "闯关挪挪车通过1关",
-        "美食奇遇记合成10次",
-        "农场螺丝王消除5组螺丝",
-        "开启领钓竿提醒",
-        "去玩热门小游戏",
-        "送福袋 我也得福袋",
-        "钓鱼结果页翻倍",
-        "补救广告",
-        "浮球游戏广告",
-    )
-
 private val stallDefaultBlacklist =
     setOf(
         // 蚂蚁新村
@@ -500,5 +475,4 @@ val DEFAULT_BLACKLIST: Map<String, Set<String>> =
         "网商银行" to myBankWelfareDefaultBlacklist,
         "神奇物种" to dodoDefaultBlacklist,
         "蚂蚁新村" to stallDefaultBlacklist,
-        "福气鱼池" to fishPondDefaultBlacklist,
     )

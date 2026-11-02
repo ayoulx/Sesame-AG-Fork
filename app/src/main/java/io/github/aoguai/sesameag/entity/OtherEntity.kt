@@ -1,7 +1,5 @@
 package io.github.aoguai.sesameag.entity
 
-import io.github.aoguai.sesameag.task.other.credit2101.Credit2101
-
 class OtherEntity(id: String, name: String) : MapperEntity() {
     init {
         this.id = id
@@ -34,25 +32,6 @@ object OtherEntityProvider {
         OtherEntity("deliverMsgSend", "道早安🌞"),
         OtherEntity("ExchangeFamilyDecoration", "兑换装饰物品🧱"),
         OtherEntity("shareToFriends", "好友分享🙆‍♂️|下方配置排除列表"),
-    )
-
-    @JvmStatic
-    fun listPropGroupOptions(): List<OtherEntity> = listOf(
-        OtherEntity("COLLECT_HISTORY_ANIMAL_7_DAYS", "当前图鉴抽卡券 🎴"),
-        OtherEntity("COLLECT_TO_FRIEND_TIMES_7_DAYS", "好友卡抽卡券 👥"),
-        OtherEntity("COLLECT_TIMES_7_DAYS", "万能卡 🃏")
-    )
-
-
-    //信用2101任务列表
-    @JvmStatic
-    fun listCreditOptions(): List<OtherEntity> = listOf(
-        OtherEntity(Credit2101.EventType.MINI_GAME_ELIMINATE, "消除小游戏 🎮"),
-        OtherEntity(Credit2101.EventType.MINI_GAME_COLLECTYJ, "收集小游戏 🏺"),
-        OtherEntity(Credit2101.EventType.MINI_GAME_MATCH3, "击杀小游戏 🧩"),
-        OtherEntity(Credit2101.EventType.GOLD_MARK, "金色印记 🟡"),
-        OtherEntity(Credit2101.EventType.BLACK_MARK, "黑色印记 ⚫"),
-        OtherEntity(Credit2101.EventType.SPACE_TIME_GATE, "时空之门 🌀")
     )
 
 }

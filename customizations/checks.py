@@ -90,14 +90,25 @@ def created() -> set[str]:
 
 
 def declared() -> set[str]:
-    """补丁声明会改动的全部文件：改过的 + 新增的。
+    """补丁声明会改动的全部文件：改过的 + 新增的 + 删除的。
 
     单看 touched 会漏：新增文件在「首次创建」时会被同时记进 touched，
     但文件已经存在时走跳过分支只记 created。于是同样一套补丁，
     本地（文件不存在，首次创建）得到 36 个文件、CI（文件已在仓库里）
     只得到 18 个，断言结果随起点漂移。声明集合必须两者取并。
+
+    删除也要计入：被删掉的上游文件在「相对基线的差异」里是一条 D 记录，
+    不声明就会被判成「意外改动」。
     """
-    return touched() | created()
+    return touched() | created() | removed()
+
+
+def removed() -> set[str]:
+    result: set[str] = set()
+    for name in os.listdir(STATE) if os.path.isdir(STATE) else []:
+        if name.startswith("removed-") and name.endswith(".txt"):
+            result.update(_state(name))
+    return result
 
 
 def check_scope() -> tuple[bool, list[str]]:
@@ -159,9 +170,14 @@ def _hash_manifest() -> dict[str, str]:
     import hashlib
 
     entries = {}
+    removed_files = removed()
     for rel in sorted(declared()):
         path = os.path.join(ROOT, rel)
         if not os.path.isfile(path):
+            # 被补丁删掉的文件没有内容可比对，跳过；
+            # 该存在却消失的文件仍然记 <missing>，让幂等断言能抓到。
+            if rel in removed_files:
+                continue
             entries[rel] = "<missing>"
             continue
         with open(path, "rb") as fp:

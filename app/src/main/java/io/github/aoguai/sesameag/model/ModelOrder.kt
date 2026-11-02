@@ -5,7 +5,6 @@ import io.github.aoguai.sesameag.task.EcoProtection.EcoProtection
 import io.github.aoguai.sesameag.task.antCooperate.AntCooperate
 import io.github.aoguai.sesameag.task.antDodo.AntDodo
 import io.github.aoguai.sesameag.task.antFarm.AntFarm
-import io.github.aoguai.sesameag.task.antFishPond.AntFishPond
 import io.github.aoguai.sesameag.task.antForest.AntForest
 import io.github.aoguai.sesameag.task.antForestPatrol.AntForestPatrol // [fork:patrol:orderimport]
 import io.github.aoguai.sesameag.task.antMember.AntMember
@@ -17,7 +16,6 @@ import io.github.aoguai.sesameag.task.antStall.AntStall
 import io.github.aoguai.sesameag.task.customTasks.ManualTaskModel
 import io.github.aoguai.sesameag.task.greenFinance.GreenFinance
 import io.github.aoguai.sesameag.task.myBankWelfare.MyBankWelfare
-import io.github.aoguai.sesameag.task.other.OtherTask
 import io.github.aoguai.sesameag.task.reserve.Reserve
 import io.github.aoguai.sesameag.task.youthPrivilege.YouthPrivilege
 
@@ -35,14 +33,12 @@ object ModelOrder {
         YouthPrivilege::class.java, // 青春特权
         AntSesameCredit::class.java, // 芝麻信用
         AntOrchard::class.java,    // 农场
-        AntFishPond::class.java,   // 福气鱼池
         AntSports::class.java,       // 运动
         EcoProtection::class.java,     // 古树
         GreenFinance::class.java,  // 绿色经营
         MyBankWelfare::class.java, // 网商福利金
         Reserve::class.java,       // 保护地
         ManualTaskModel::class.java, // 手动调度任务
-        OtherTask::class.java,      // 其他
         AnswerAI::class.java         // AI答题
 
     )

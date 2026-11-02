@@ -214,9 +214,21 @@ object Log {
     }
 
     @JvmStatic
+    fun forestPatrol(msg: String) {
+        business(LogChannel.FOREST_PATROL, msg)
+    }
+    // [fork:logchan:funpatrol]
+
+    @JvmStatic
     fun orchard(msg: String) {
         business(LogChannel.ORCHARD, msg)
     }
+
+    @JvmStatic
+    fun goldenBean(msg: String) {
+        business(LogChannel.GOLDEN_BEAN, msg)
+    }
+    // [fork:logchan:fungolden]
 
     @JvmStatic
     @JvmOverloads
@@ -252,11 +264,6 @@ object Log {
     @JvmStatic
     fun mybank(msg: String) {
         business(LogChannel.MYBANK, msg)
-    }
-
-    @JvmStatic
-    fun fishpond(msg: String) {
-        business(LogChannel.FISHPOND, msg)
     }
 
     @JvmStatic

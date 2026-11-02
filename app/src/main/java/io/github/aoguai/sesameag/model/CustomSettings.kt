@@ -56,7 +56,6 @@ object CustomSettings {
             SimpleEntity("antOrchard", "农场"),
             SimpleEntity("antStall", "新村"),
             SimpleEntity("antDodo", "神奇物种"),
-            SimpleEntity("antFishPond", "福气鱼池"),
             SimpleEntity("antCooperate", "蚂蚁森林合种"),
             SimpleEntity("antSports", "运动"),
             SimpleEntity("antMember", "会员"),
@@ -65,7 +64,6 @@ object CustomSettings {
             SimpleEntity("EcoProtection", "生态保护"),
             SimpleEntity("greenFinance", "绿色经营"),
             SimpleEntity("reserve", "保护地"),
-            SimpleEntity("other", "其他任务")
         )
     }
 
@@ -168,7 +166,6 @@ object CustomSettings {
             taskInfo.contains("农场") || taskInfo.contains("antOrchard") -> "antOrchard"
             taskInfo.contains("新村") || taskInfo.contains("antStall") -> "antStall"
             taskInfo.contains("神奇物种") || taskInfo.contains("antDodo") -> "antDodo"
-            taskInfo.contains("福气鱼池") || taskInfo.contains("antFishPond") -> "antFishPond"
             taskInfo.contains("运动") || taskInfo.contains("antSports") -> "antSports"
             taskInfo.contains("芝麻信用") || taskInfo.contains("antSesameCredit") -> "antSesameCredit"
             taskInfo.contains("会员") || taskInfo.contains("antMember") -> "antMember"
@@ -176,7 +173,6 @@ object CustomSettings {
             taskInfo.contains("生态保护") || taskInfo.contains("EcoProtection") -> "EcoProtection"
             taskInfo.contains("绿色经营") || taskInfo.contains("greenFinance") -> "greenFinance"
             taskInfo.contains("保护地") || taskInfo.contains("reserve") -> "reserve"
-            taskInfo.contains("其他任务") || taskInfo.contains("other") -> "other"
             else -> null
         }
     }

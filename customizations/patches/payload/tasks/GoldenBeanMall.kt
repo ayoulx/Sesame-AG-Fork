@@ -157,7 +157,7 @@ internal fun AntOrchard.runGoldenBeanMallExchange() {
         refreshGoldenBeanMallOptionsForRemote()
         val selected = goldenBeanMallExchangeList.value?.toMap().orEmpty()
         if (selected.isEmpty()) {
-            Log.orchard("金豆商城未选择商品，仅更新兑换候选")
+            Log.goldenBean("金豆商城未选择商品，仅更新兑换候选")
             return
         }
         var confirmed = 0
@@ -176,7 +176,7 @@ internal fun AntOrchard.runGoldenBeanMallExchange() {
                 val (spu, sku) = match
                 val item = mallExchangeItem(spu, sku)
                 if (item.safety != ExchangeSafety.AUTO) {
-                    Log.orchard("金豆商城[${item.name}]本轮不兑换：${item.safetyReason}")
+                    Log.goldenBean("金豆商城[${item.name}]本轮不兑换：${item.safetyReason}")
                     break
                 }
                 val index = GoldenBeanTreasureSupport.parseResponse(GoldenBeanRpcCall.index())
@@ -187,7 +187,7 @@ internal fun AntOrchard.runGoldenBeanMallExchange() {
                 val cost = BigDecimal.valueOf(sku.getJSONObject("price").getLong("cent"), 2)
                 check(balance.signum() >= 0) { "金豆罐余额无效:$balance" }
                 if (balance < cost) {
-                    Log.orchard("金豆商城[${item.name}]金豆罐不足，余额$balance，需$cost")
+                    Log.goldenBean("金豆商城[${item.name}]金豆罐不足，余额$balance，需$cost")
                     break
                 }
 
@@ -249,7 +249,7 @@ internal fun AntOrchard.runGoldenBeanMallExchange() {
                 CoroutineUtils.sleepCompat(executeIntervalInt.toLong().coerceAtLeast(RandomUtil.nextLong(425, 501)))
             }
             if (confirmed >= CONVERGENCE_LIMIT) {
-                Log.orchard("金豆商城本轮已确认${confirmed}笔，剩余配置留待后续调度")
+                Log.goldenBean("金豆商城本轮已确认${confirmed}笔，剩余配置留待后续调度")
                 return
             }
         }
@@ -348,7 +348,7 @@ private fun confirmMallExchange(store: UserDataStore, pending: JSONObject, check
         val flag = StatusFlags.FLAG_GOLDEN_BEAN_MALL_EXCHANGE_COUNT_PREFIX + itemId
         val expected = pending.getInt("confirmedCount")
         if ((Status.getIntFlagToday(flag) ?: 0) < expected) Status.setIntFlagToday(flag, expected)
-        Log.orchard("金豆商城[${pending.optString("name")}]兑换确认成功 orderNo=$orderNo")
+        Log.goldenBean("金豆商城[${pending.optString("name")}]兑换确认成功 orderNo=$orderNo")
     }
     store.put(PENDING_KEY, "{}")
     return true

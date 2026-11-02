@@ -3,6 +3,8 @@ package io.github.aoguai.sesameag.util
 import io.github.aoguai.sesameag.entity.friend.FriendRelation
 import io.github.aoguai.sesameag.util.friend.FriendRepository
 import io.github.aoguai.sesameag.util.maps.UserMap
+import java.util.concurrent.ConcurrentHashMap // [fork:friendheal:import]
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * 好友关系守卫：
@@ -61,12 +63,42 @@ object FriendGuard {
         }
         if (relation != FriendRelation.MUTUAL) {
             val maskName = UserMap.getMaskName(normalized) ?: normalized
-            Log.record(
-                logTag,
-                "$sceneName 跳过[$maskName]：单向好友或已失效(relation=$relation)"
-            )
+            logSkippedNonMutual(logTag, sceneName, maskName, relation)
             return true
         }
         return false
+    }
+
+    // 单向/失效好友在收能量这类循环里是成批出现的（一次几十个，每轮都来一遍），
+    // 逐条记录会把整份日志冲掉。按场景开 60 秒窗口：窗口内第一条立即记录，
+    // 附带同期被折叠的数量，其余只计数。// [fork:friendheal:guard]
+    private const val SKIP_LOG_WINDOW_MS = 60_000L
+
+    private class SkipWindow {
+        val pending = AtomicInteger(0)
+
+        @Volatile
+        var lastLoggedAt: Long = 0L
+    }
+
+    private val skipWindows = ConcurrentHashMap<String, SkipWindow>()
+
+    private fun logSkippedNonMutual(
+        logTag: String,
+        sceneName: String,
+        maskName: String,
+        relation: FriendRelation
+    ) {
+        val window = skipWindows.getOrPut(sceneName) { SkipWindow() }
+        val count = window.pending.incrementAndGet()
+        val now = System.currentTimeMillis()
+        if (now - window.lastLoggedAt < SKIP_LOG_WINDOW_MS) {
+            return
+        }
+        window.lastLoggedAt = now
+        window.pending.set(0)
+        val folded = count - 1
+        val tail = if (folded > 0) "（同期另折叠 $folded 个同类跳过）" else ""
+        Log.record(logTag, "$sceneName 跳过[$maskName]：单向好友或已失效(relation=$relation)$tail")
     }
 }

@@ -119,13 +119,13 @@ abstract class ModelTask : Model() {
     private fun recordModuleCheckMessage(msg: String) {
         when (getName()) {
             "蚂蚁森林", "蚂蚁森林合种", "保护地", "生态保护" -> Log.forest(msg)
+            "保护地巡护" -> Log.forestPatrol(msg) // [fork:logchan:modulelog]
             "农场", "芭芭农场" -> Log.orchard(msg)
             "蚂蚁庄园" -> Log.farm(msg)
             "新村", "蚂蚁新村" -> Log.stall(msg)
             "海洋", "神奇海洋" -> Log.ocean(msg)
             "神奇物种" -> Log.dodo(msg)
             "会员" -> Log.member(msg)
-            "福气鱼池" -> Log.fishpond(msg)
             "运动" -> Log.sports(msg)
             "绿色经营" -> Log.greenFinance(msg)
             "芝麻信用" -> Log.sesame(msg)
@@ -135,7 +135,6 @@ abstract class ModelTask : Model() {
                 ModelGroup.FARM -> Log.farm(msg)
                 ModelGroup.STALL -> Log.stall(msg)
                 ModelGroup.DODO -> Log.dodo(msg)
-                ModelGroup.FISHPOND -> Log.fishpond(msg)
                 ModelGroup.SPORTS -> Log.sports(msg)
                 ModelGroup.MEMBER -> Log.member(msg)
                 ModelGroup.SESAME_CREDIT -> Log.sesame(msg)

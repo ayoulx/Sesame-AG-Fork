@@ -102,7 +102,7 @@ internal object LegacyPatrolWorkflow {
         val patrolId = patrolConfig.optInt("patrolId", 0)
         val animals = patrolConfig.optJSONArray("animals")
         if (animals == null || animals.length() == 0) {
-            Log.forest("巡护地图缺少动物列表[patrolId=$patrolId]，不以图鉴缺片优先")
+            Log.forestPatrol("巡护地图缺少动物列表[patrolId=$patrolId]，不以图鉴缺片优先")
             return emptySet()
         }
         val animalIds = mutableSetOf<Int>()
@@ -111,7 +111,7 @@ internal object LegacyPatrolWorkflow {
             if (!isNormalPatrolAnimal(animal)) {
                 val shortDesc = animal.optJSONObject("extInfo")?.optString("shortDesc").orEmpty()
                 if (shortDesc.contains("限定")) {
-                    Log.forest(
+                    Log.forestPatrol(
                         "巡护图鉴排除活动动物[patrolId=$patrolId," +
                             "animalId=${animal.optInt("id", -1)}," +
                             "name=${animal.optString("name", "未知")},shortDesc=$shortDesc]"
@@ -125,7 +125,7 @@ internal object LegacyPatrolWorkflow {
             }
         }
         if (animalIds.isEmpty()) {
-            Log.forest("巡护地图无可证明的常驻在线动物[patrolId=$patrolId]，不以图鉴缺片优先")
+            Log.forestPatrol("巡护地图无可证明的常驻在线动物[patrolId=$patrolId]，不以图鉴缺片优先")
         }
         return animalIds
     }
@@ -138,12 +138,12 @@ internal object LegacyPatrolWorkflow {
         return try {
             val response = unwrapResData(JSONObject(AntForestPatrolRpcCall.queryAnimalAndPiece(0, record.patrolId)))
             if (!ResChecker.checkRes(TAG, "查询巡护图鉴失败:", response)) {
-                Log.forest("巡护图鉴检查失败[${record.reserveName}/${record.patrolId}]: ${response.optString("resultDesc", response.optString("desc"))}")
+                Log.forestPatrol("巡护图鉴检查失败[${record.reserveName}/${record.patrolId}]: ${response.optString("resultDesc", response.optString("desc"))}")
                 return PatrolPieceState.UNKNOWN
             }
             val animalProps = response.optJSONArray("animalProps")
             if (animalProps == null || animalProps.length() == 0) {
-                Log.forest("巡护图鉴缺少动物碎片列表[${record.reserveName}/${record.patrolId}]")
+                Log.forestPatrol("巡护图鉴缺少动物碎片列表[${record.reserveName}/${record.patrolId}]")
                 return PatrolPieceState.UNKNOWN
             }
 
@@ -157,7 +157,7 @@ internal object LegacyPatrolWorkflow {
                 }
                 matched = true
                 if (!animalProp.has("main") || animalProp.isNull("main")) {
-                    Log.forest(
+                    Log.forestPatrol(
                         "巡护图鉴确认可推进缺片[${record.reserveName}/${record.patrolId}/" +
                             "${animal.optString("name", animalId.toString())}]"
                     )
@@ -165,10 +165,10 @@ internal object LegacyPatrolWorkflow {
                 }
             }
             if (!matched) {
-                Log.forest("巡护图鉴未返回当前保护地常驻在线动物碎片[${record.reserveName}/${record.patrolId}]，不以图鉴缺片优先")
+                Log.forestPatrol("巡护图鉴未返回当前保护地常驻在线动物碎片[${record.reserveName}/${record.patrolId}]，不以图鉴缺片优先")
                 PatrolPieceState.UNKNOWN
             } else {
-                Log.forest("巡护图鉴无可推进的常驻动物缺片[${record.reserveName}/${record.patrolId}]")
+                Log.forestPatrol("巡护图鉴无可推进的常驻动物缺片[${record.reserveName}/${record.patrolId}]")
                 PatrolPieceState.COMPLETE
             }
         } catch (t: Throwable) {
@@ -182,7 +182,7 @@ internal object LegacyPatrolWorkflow {
         val sortedRecords = collectPatrolRecordInfo(records)
             .sortedWith(compareBy<PatrolRecordInfo> { it.startDate }.thenBy { it.patrolId })
         if (sortedRecords.isEmpty()) {
-            Log.forest("巡护记录为空，保留当前保护地")
+            Log.forestPatrol("巡护记录为空，保留当前保护地")
             return null
         }
 
@@ -205,7 +205,7 @@ internal object LegacyPatrolWorkflow {
             inventorySelection.target?.let { return it.copy(cacheable = inventorySelection.cacheable) }
             canCacheTarget = inventorySelection.cacheable
         } else {
-            Log.forest("巡护图鉴状态不完整，保留原地图排序，不按背包动物切换")
+            Log.forestPatrol("巡护图鉴状态不完整，保留原地图排序，不按背包动物切换")
         }
 
         sortedRecords.firstOrNull { hasUnreachedPatrolNode(it.userPatrol) }?.let {
@@ -230,7 +230,7 @@ internal object LegacyPatrolWorkflow {
         }
         val animalProps = response.optJSONArray("animalProps")
         if (animalProps == null || animalProps.length() == 0) {
-            Log.forest("巡护背包动物为空，保留原地图排序")
+            Log.forestPatrol("巡护背包动物为空，保留原地图排序")
             return PatrolInventorySelection(null, animalProps != null)
         }
 
@@ -248,11 +248,11 @@ internal object LegacyPatrolWorkflow {
                 if (animalId !in normalAnimalIds) continue
                 val main = animalProp.optJSONObject("main")
                 if (main == null || !main.has("holdsNum") || main.isNull("holdsNum")) {
-                    Log.forest("巡护背包动物缺少holdsNum字段[animalId=$animalId]，保留原地图排序")
+                    Log.forestPatrol("巡护背包动物缺少holdsNum字段[animalId=$animalId]，保留原地图排序")
                     return PatrolInventorySelection(null, false)
                 }
                 if (!hasAnimalPropRobEnergy(animalProp)) {
-                    Log.forest("巡护背包动物缺少robEnergy字段[animalId=$animalId]，保留原地图排序")
+                    Log.forestPatrol("巡护背包动物缺少robEnergy字段[animalId=$animalId]，保留原地图排序")
                     return PatrolInventorySelection(null, false)
                 }
                 val holdsNum = main.optInt("holdsNum", 0)
@@ -268,7 +268,7 @@ internal object LegacyPatrolWorkflow {
             }
         }
         val target = bestTarget ?: run {
-            Log.forest("巡护背包动物未匹配普通地图动物，保留原地图排序")
+            Log.forestPatrol("巡护背包动物未匹配普通地图动物，保留原地图排序")
             return PatrolInventorySelection(null, canCacheTarget)
         }
         return PatrolInventorySelection(
@@ -305,7 +305,7 @@ internal object LegacyPatrolWorkflow {
         }
         val records = recordPayload.optJSONArray("records")
         if (records == null || records.length() == 0) {
-            Log.forest("巡护记录缺少records，保留当前保护地")
+            Log.forestPatrol("巡护记录缺少records，保留当前保护地")
             return false
         }
         val cachedId = Status.getIntFlagToday(StatusFlags.FLAG_ANTFOREST_PATROL_TARGET) ?: 0
@@ -322,17 +322,17 @@ internal object LegacyPatrolWorkflow {
         } ?: return false
         if (target.patrolId <= 0 || target.patrolId == currentPatrolId) {
             if (target.cacheable) Status.setIntFlagToday(StatusFlags.FLAG_ANTFOREST_PATROL_TARGET, target.patrolId)
-            Log.forest("巡护⚖️-当前地图保持[${target.reserveName}/${target.patrolId}](${target.reason})")
+            Log.forestPatrol("巡护⚖️-当前地图保持[${target.reserveName}/${target.patrolId}](${target.reason})")
             return false
         }
         val switchResponse = unwrapResData(JSONObject(AntForestPatrolRpcCall.switchUserPatrol(target.patrolId.toString())))
         return if (ResChecker.checkRes(TAG, "切换巡护地图失败:", switchResponse)) {
             if (target.cacheable) Status.setIntFlagToday(StatusFlags.FLAG_ANTFOREST_PATROL_TARGET, target.patrolId)
-            Log.forest("巡护⚖️-切换地图至[${target.reserveName}/${target.patrolId}](${target.reason})")
+            Log.forestPatrol("巡护⚖️-切换地图至[${target.reserveName}/${target.patrolId}](${target.reason})")
             true
         } else {
             Status.setIntFlagToday(StatusFlags.FLAG_ANTFOREST_PATROL_TARGET, 0)
-            Log.forest("巡护地图切换失败[${target.reserveName}/${target.patrolId}]: ${switchResponse.optString("resultDesc", switchResponse.optString("desc"))}")
+            Log.forestPatrol("巡护地图切换失败[${target.reserveName}/${target.patrolId}]: ${switchResponse.optString("resultDesc", switchResponse.optString("desc"))}")
             false
         }
     }
@@ -356,10 +356,10 @@ internal object LegacyPatrolWorkflow {
                 AntForestPatrolRpcCall.queryUserPatrol()
             }
             return if (replenishResult == ExchangeReplenishResult.EXCHANGED) {
-                Log.forest("保护地巡护机会已触发缺货补兑，重新查询巡护状态")
+                Log.forestPatrol("保护地巡护机会已触发缺货补兑，重新查询巡护状态")
                 true
             } else {
-                Log.forest("保护地巡护机会补兑未完成#$replenishResult")
+                Log.forestPatrol("保护地巡护机会补兑未完成#$replenishResult")
                 false
             }
         }
@@ -379,7 +379,7 @@ internal object LegacyPatrolWorkflow {
                         ) {
                             jo = unwrapResData(JSONObject(AntForestPatrolRpcCall.queryUserPatrol()))
                             if (!ResChecker.checkRes(TAG, "查询巡护任务失败:", jo)) {
-                                Log.forest(jo.optString("resultDesc", jo.optString("desc", "查询巡护任务失败")))
+                                Log.forestPatrol(jo.optString("resultDesc", jo.optString("desc", "查询巡护任务失败")))
                                 break
                             }
                         }
@@ -387,7 +387,7 @@ internal object LegacyPatrolWorkflow {
                     // 获取用户当前巡护状态信息
                     val userPatrol = jo.optJSONObject("userPatrol")
                     if (userPatrol == null) {
-                        Log.forest("巡护任务缺少userPatrol字段，跳过本轮")
+                        Log.forestPatrol("巡护任务缺少userPatrol字段，跳过本轮")
                         break
                     }
                     val currentNode = userPatrol.getInt("currentNode")
@@ -406,7 +406,7 @@ internal object LegacyPatrolWorkflow {
                     }
                     if (usedStep >= maxExchangeStep && !Status.hasFlagToday(patrolChanceLimitFlag)) {
                         Status.setFlagToday(patrolChanceLimitFlag)
-                        Log.forest("今日保护地巡护兑换次数已达上限(${chanceFromStepUpperLimit}次)，后续不再重复尝试")
+                        Log.forestPatrol("今日保护地巡护兑换次数已达上限(${chanceFromStepUpperLimit}次)，后续不再重复尝试")
                     }
                     if ("STANDING" == currentStatus) { // 当前巡护状态为"STANDING"
                         if (leftChance > 0) { // 如果还有剩余的巡护次数，则开始巡护
@@ -420,20 +420,20 @@ internal object LegacyPatrolWorkflow {
                             jo = JSONObject(AntForestPatrolRpcCall.exchangePatrolChance(leftStep))
                             if (ResChecker.checkRes(TAG, "兑换巡护次数失败:", jo)) { // 兑换成功，增加巡护次数
                                 val addedChance = jo.optInt("addedChance", 0)
-                                Log.forest("步数兑换⚖️[巡护次数*$addedChance]")
+                                Log.forestPatrol("步数兑换⚖️[巡护次数*$addedChance]")
                                 val consumedStep = if (addedChance > 0) addedChance * chanceStepUnit else chanceStepUnit
                                 if (usedStep + consumedStep >= maxExchangeStep) {
                                     Status.setFlagToday(patrolChanceLimitFlag)
-                                    Log.forest("今日保护地巡护兑换次数已达上限(${chanceFromStepUpperLimit}次)，后续不再重复尝试")
+                                    Log.forestPatrol("今日保护地巡护兑换次数已达上限(${chanceFromStepUpperLimit}次)，后续不再重复尝试")
                                 }
                                 continue  // 跳过当前循环
                             } else {
                                 val resultDesc = jo.optString("resultDesc")
                                 if (resultDesc.contains("上限") || resultDesc.contains("已达") || resultDesc.contains("最多")) {
                                     Status.setFlagToday(patrolChanceLimitFlag)
-                                    Log.forest("今日保护地巡护兑换次数已达上限(${chanceFromStepUpperLimit}次)，后续不再重复尝试")
+                                    Log.forestPatrol("今日保护地巡护兑换次数已达上限(${chanceFromStepUpperLimit}次)，后续不再重复尝试")
                                 } else {
-                                    Log.forest(resultDesc)
+                                    Log.forestPatrol(resultDesc)
                                 }
                             }
                         }
@@ -446,7 +446,7 @@ internal object LegacyPatrolWorkflow {
                         continue
                     }
                 } else {
-                    Log.forest(jo.optString("resultDesc", jo.optString("desc", "查询巡护任务失败")))
+                    Log.forestPatrol(jo.optString("resultDesc", jo.optString("desc", "查询巡护任务失败")))
                 }
                 break // 完成一次巡护任务后退出循环
             } while (!Thread.currentThread().isInterrupted && !ApplicationHookConstants.isOffline())
@@ -468,7 +468,7 @@ internal object LegacyPatrolWorkflow {
             do {
                 val jo = currentResponse
                 if (!ResChecker.checkRes(TAG, jo)) {
-                    Log.forest(jo.optString("resultDesc", jo.optString("desc", "巡护失败")))
+                    Log.forestPatrol(jo.optString("resultDesc", jo.optString("desc", "巡护失败")))
                     return
                 }
                 logPatrolRewardPiece(jo.optJSONArray("events")?.optJSONObject(0))
@@ -487,7 +487,7 @@ internal object LegacyPatrolWorkflow {
             ?.optString("name")
             .orEmpty()
         if (animalName.isNotBlank()) {
-            Log.forest("巡护森林🏇🏻[${animalName}碎片]")
+            Log.forestPatrol("巡护森林🏇🏻[${animalName}碎片]")
         }
     }
 
@@ -530,7 +530,7 @@ internal object LegacyPatrolWorkflow {
 
     private fun logPatrolKeepGoingStop(currentStatus: String, reason: String) {
         if ("GOING" == currentStatus) {
-            Log.forest("巡护进行中但$reason，停止本轮巡护续跑")
+            Log.forestPatrol("巡护进行中但$reason，停止本轮巡护续跑")
         }
     }
 
@@ -647,12 +647,12 @@ internal object LegacyPatrolWorkflow {
                 AntForestPatrolRpcCall.consumeAnimalProp(propGroup, propType)
             )
             if (ResChecker.checkRes(TAG, "巡护派遣失败:", jo)) {
-                Log.forest(
+                Log.forestPatrol(
                     "巡护派遣🐆[$name]#持有${selection.holdsNum}个，" +
                         "预计能量${selection.estimatedEnergy}g。"
                 )
             } else {
-                Log.forest(jo.getString("resultDesc"))
+                Log.forestPatrol(jo.getString("resultDesc"))
             }
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
@@ -670,13 +670,13 @@ internal object LegacyPatrolWorkflow {
             val resultCode = response.optString("resultCode")
             // 检查接口调用是否成功
             if ("SUCCESS" != resultCode) {
-                Log.forest("查询失败: " + response.optString("resultDesc"))
+                Log.forestPatrol("查询失败: " + response.optString("resultDesc"))
                 return
             }
             // 获取动物属性列表
             val animalProps = response.optJSONArray("animalProps")
             if (animalProps == null || animalProps.length() == 0) {
-                Log.forest("动物属性列表为空")
+                Log.forestPatrol("动物属性列表为空")
                 return
             }
             for (animalId in collectCombinableAnimalIds(animalProps)) {
@@ -730,7 +730,7 @@ internal object LegacyPatrolWorkflow {
                 val response = unwrapResData(JSONObject(AntForestPatrolRpcCall.queryAnimalAndPiece(animalId)))
                 var resultCode = response.optString("resultCode")
                 if ("SUCCESS" != resultCode) {
-                    Log.forest(
+                    Log.forestPatrol(
                         "动物碎片合成查询失败[#${animalId}]: " +
                             response.optString("resultDesc", response.optString("desc"))
                     )
@@ -738,7 +738,7 @@ internal object LegacyPatrolWorkflow {
                 }
                 val animalProps = response.optJSONArray("animalProps")
                 if (animalProps == null || animalProps.length() == 0) {
-                    Log.forest("动物碎片合成查询返回空动物数据[#${animalId}]")
+                    Log.forestPatrol("动物碎片合成查询返回空动物数据[#${animalId}]")
                     break
                 }
                 // 获取第一个动物的属性
@@ -749,7 +749,7 @@ internal object LegacyPatrolWorkflow {
                 // 获取碎片信息
                 val pieces = animalProp.optJSONArray("pieces")
                 if (pieces == null || pieces.length() == 0) {
-                    Log.forest("动物碎片合成查询缺少碎片数据[$name]")
+                    Log.forestPatrol("动物碎片合成查询缺少碎片数据[$name]")
                     break
                 }
                 var canCombineAnimalPiece = true
@@ -759,13 +759,13 @@ internal object LegacyPatrolWorkflow {
                     val piece = pieces.optJSONObject(j)
                     if (piece == null || piece.optInt("holdsNum", 0) <= 0) {
                         canCombineAnimalPiece = false
-                        Log.forest("动物碎片不足[$name]：无法继续自动合成")
+                        Log.forestPatrol("动物碎片不足[$name]：无法继续自动合成")
                         break
                     }
                     val propId = piece.optJSONArray("propIdList")?.optString(0)?.takeIf { it.isNotBlank() }
                     if (propId == null) {
                         canCombineAnimalPiece = false
-                        Log.forest(
+                        Log.forestPatrol(
                             "动物碎片合成暂停[$name]：碎片[${piece.optString("propType")}]未返回稳定propIdList，跳过本轮合成"
                         )
                         break
@@ -779,11 +779,11 @@ internal object LegacyPatrolWorkflow {
                     resultCode = combineResponse.optString("resultCode")
                     if ("SUCCESS" == resultCode) {
                         Status.setIntFlagToday(StatusFlags.FLAG_ANTFOREST_PATROL_TARGET, 0)
-                        Log.forest("成功合成动物💡[$name]")
+                        Log.forestPatrol("成功合成动物💡[$name]")
                         animalId = id
                         continue
                     } else {
-                        Log.forest(
+                        Log.forestPatrol(
                             "动物碎片合成失败[$name]: " +
                                 combineResponse.optString("resultDesc", combineResponse.optString("desc"))
                         )

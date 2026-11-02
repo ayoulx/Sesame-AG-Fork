@@ -205,15 +205,6 @@ object StatusFlags {
     /** 芝麻信用：芝麻粒兑换今日是否已处理 */
     const val FLAG_SESAME_GRAIN_EXCHANGE_DONE: String = "AntSesameCredit::sesameGrainExchangeDone"
 
-    /** 信用 2101：图鉴章节任务是否全部完成 */
-    const val FLAG_CREDIT2101_CHAPTER_TASK_DONE: String = "FLAG_Credit2101_ChapterTask_Done"
-
-    /** 信用 2101：事件当日计数前缀 */
-    const val FLAG_CREDIT2101_EVENT_COUNT_PREFIX: String = "2101_Event_"
-
-    /** 信用 2101：事件当日计数后缀 */
-    const val FLAG_CREDIT2101_EVENT_COUNT_SUFFIX: String = "_COUNT_TODAY"
-
     /** 商家服务：每日签到 */
     const val FLAG_ANTMEMBER_MERCHANT_SIGN_DONE: String = "AntMember::merchantSignDone"
 
@@ -346,27 +337,6 @@ object StatusFlags {
 
     /** 农场抽抽乐：今日已探测过新一轮活动 */
     const val FLAG_ANTORCHARD_DRAW_ACTIVITY_PROBED = "AntOrchard::drawActivityProbed" // [fork:orchardchou:flag]
-
-    /** 福气鱼池：今日签到已处理 */
-    const val FLAG_ANTFISHPOND_SIGN_DONE = "AntFishPond::signDone"
-
-    /** 福气鱼池：每日宝箱已领取 */
-    const val FLAG_ANTFISHPOND_GIFT_BOX_DONE = "AntFishPond::giftBoxDone"
-
-    /** 福气鱼池：明日钓竿奖励已领取 */
-    const val FLAG_ANTFISHPOND_TOMORROW_ROD_DONE = "AntFishPond::tomorrowRodDone"
-
-    /** 福气鱼池：今日稳定任务已无可执行项 */
-    const val FLAG_ANTFISHPOND_TASKS_DONE = "AntFishPond::tasksDone"
-
-    /** 福气鱼池：缺少 fishpondAngle riskToken */
-    const val FLAG_ANTFISHPOND_RISK_TOKEN_MISSING = "AntFishPond::riskTokenMissing"
-
-    /** 福气鱼池：今日自动钓鱼次数 */
-    const val FLAG_ANTFISHPOND_FISH_COUNT = "AntFishPond::fishCount"
-
-    /** 福气鱼池：今日自动钓鱼达到配置上限 */
-    const val FLAG_ANTFISHPOND_FISH_LIMIT_REACHED = "AntFishPond::fishLimitReached"
 
     /** 蚂蚁新村：今日丢肥料是否达到上限 */
     const val FLAG_ANTSTALL_THROW_MANURE_LIMIT: String = "Flag_AntStall_Throw_Manure_Limit"

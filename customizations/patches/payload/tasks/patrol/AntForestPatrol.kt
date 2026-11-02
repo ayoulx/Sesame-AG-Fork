@@ -89,7 +89,7 @@ class AntForestPatrol : ModelTask() {
 
     override suspend fun runSuspend() {
         val uid = UserMap.currentUid?.takeIf { it.isNotBlank() } ?: return
-        Log.forest("执行开始-${getName()}")
+        Log.forestPatrol("执行开始-${getName()}")
         val onMapCompleted: (() -> Unit)? = if (exchangeCertificate.value == true || autoSwitchMap.value == true) {
             {
                 MonopolyPatrolWorkflow.updateMaps(
@@ -136,7 +136,7 @@ class AntForestPatrol : ModelTask() {
                 }
             }
         } finally {
-            Log.forest("执行结束-${getName()}")
+            Log.forestPatrol("执行结束-${getName()}")
         }
     }
 
@@ -180,9 +180,9 @@ class AntForestPatrol : ModelTask() {
             if (confirmed?.optString("shortDay") == ext.getString("shortDay") && confirmed.optBoolean("isCollected")) {
                 val energy = ext.optInt("energy", 0)
                 if (accepted && energy > 0) Statistics.addData(uid, Statistics.DataType.COLLECTED, energy)
-                Log.forest("已确认收取[${ext.optJSONObject("animal")?.optString("name")}]派遣能量${if (accepted) "[$energy g]" else "，本次响应未确认到账量"}")
+                Log.forestPatrol("已确认收取[${ext.optJSONObject("animal")?.optString("name")}]派遣能量${if (accepted) "[$energy g]" else "，本次响应未确认到账量"}")
             } else {
-                Log.forest("旧版动物[${animal.getString("propId")}]能量尚未确认领取，留待下次查询")
+                Log.forestPatrol("旧版动物[${animal.getString("propId")}]能量尚未确认领取，留待下次查询")
             }
             return
         }
@@ -215,7 +215,7 @@ class AntForestPatrol : ModelTask() {
                     Log.error(TAG, "新版动物领取成功但缺少实际到账量:$response")
                 } else {
                     if (collected > 0) Statistics.addData(uid, Statistics.DataType.COLLECTED, collected)
-                    Log.forest("收取[${creature.optString("creatureName", code)}]派遣能量[$collected g]")
+                    Log.forestPatrol("收取[${creature.optString("creatureName", code)}]派遣能量[$collected g]")
                 }
             }
         } catch (e: CancellationException) {
@@ -226,7 +226,7 @@ class AntForestPatrol : ModelTask() {
         if (ApplicationHookConstants.isOffline() || UserMap.currentUid != uid) return
         val refreshed = queryUsingCreature(uid) ?: return
         if (refreshed.optJSONObject("userCreatureVO")?.optJSONObject("robEnergyVO")?.optBoolean("energyIsCollect") != true) {
-            Log.forest("新版动物能量尚未确认领取，留待下次调度查询")
+            Log.forestPatrol("新版动物能量尚未确认领取，留待下次调度查询")
         }
     }
 
@@ -234,7 +234,7 @@ class AntForestPatrol : ModelTask() {
         val oldAnimals = queryLegacyAnimals() ?: return
         for (index in 0 until oldAnimals.length()) {
             if (oldAnimals.optJSONObject(index)?.optString("propGroup") == "animal") {
-                Log.forest("已有旧版动物工作，保留当前伙伴")
+                Log.forestPatrol("已有旧版动物工作，保留当前伙伴")
                 return
             }
         }
@@ -253,10 +253,10 @@ class AntForestPatrol : ModelTask() {
                 val entry = queryMonopolyEntry() ?: return
                 val usingAnimal = findUsingCreature(entry)
                 if (usingAnimal == null || !isCreatureExpired(usingAnimal)) {
-                    Log.forest("已有新版动物工作，保留当前伙伴")
+                    Log.forestPatrol("已有新版动物工作，保留当前伙伴")
                     return
                 }
-                Log.forest(
+                Log.forestPatrol(
                     "新版动物[${usingAnimal.optString("creatureName", usingAnimal.optString("creatureCode", ""))}]工作到期，尝试替换新伙伴"
                 )
                 if (dispatchMonopolyAnimal(entry, replaceUsing = true) != false) {
@@ -266,7 +266,7 @@ class AntForestPatrol : ModelTask() {
             }
             false -> Unit
             else -> {
-                Log.forest("新版占用尚未确认，仅保留旧版非强制派遣请求")
+                Log.forestPatrol("新版占用尚未确认，仅保留旧版非强制派遣请求")
                 if (!ApplicationHookConstants.isOffline() && UserMap.currentUid == uid) dispatchLegacyAnimal()
                 return
             }
@@ -284,7 +284,7 @@ class AntForestPatrol : ModelTask() {
                 return
             }
         }
-        Log.forest("当前没有可派遣动物")
+        Log.forestPatrol("当前没有可派遣动物")
     }
 
     private fun queryMonopolyEntry(): JSONObject? =
@@ -327,7 +327,7 @@ class AntForestPatrol : ModelTask() {
             Log.error(TAG, "旧版动物派遣回查未确认目标[$propType/$propId]，不改派其他伙伴")
             return null
         }
-        Log.forest("已确认旧版动物派遣[${confirmed.getString("propId")}]，类型[$propType]")
+        Log.forestPatrol("已确认旧版动物派遣[${confirmed.getString("propId")}]，类型[$propType]")
         return true
     }
 
@@ -373,7 +373,7 @@ class AntForestPatrol : ModelTask() {
             Log.error(TAG, "新版动物派遣回查未确认目标[$code]，不改派其他伙伴")
             return null
         }
-        Log.forest("已确认派遣新版动物[${selected.optString("creatureName", code)}]")
+        Log.forestPatrol("已确认派遣新版动物[${selected.optString("creatureName", code)}]")
         return true
     }
 

@@ -42,7 +42,7 @@ internal object MonopolyPatrolWorkflow {
             val end = activity.optString("endDate").takeIf { it.isNotBlank() }?.let { dateFormat.parse(it)?.time }
             val now = System.currentTimeMillis()
             if ((start != null && now < start) || (end != null && now >= end)) {
-                Log.forest("新巡护当前区域或地图不在开放期，停止本轮")
+                Log.forestPatrol("新巡护当前区域或地图不在开放期，停止本轮")
                 return
             }
         }
@@ -73,13 +73,13 @@ internal object MonopolyPatrolWorkflow {
                     return
                 }
                 if (eventId in confirmedEvents) {
-                    Log.forest("新巡护事件[$eventId]已提交确认，等待后续调度刷新")
+                    Log.forestPatrol("新巡护事件[$eventId]已提交确认，等待后续调度刷新")
                     return
                 }
                 val confirmation = parsePatrolResponse(AntForestPatrolRpcCall.confirmMonopolyEvent(eventId, action))
                 if (!ResChecker.checkRes(TAG, "新巡护事件确认失败:", confirmation)) return
                 confirmedEvents.add(eventId)
-                Log.forest("新巡护事件完成[$eventId] 奖励=${confirmation.optJSONArray("eventResult") ?: JSONArray()}")
+                Log.forestPatrol("新巡护事件完成[$eventId] 奖励=${confirmation.optJSONArray("eventResult") ?: JSONArray()}")
                 state = parsePatrolResponse(AntForestPatrolRpcCall.queryMonopolyEntryInfo())
                 if (!ResChecker.checkRes(TAG, "刷新新巡护事件状态失败:", state)) return
                 pendingEvent = state.optJSONObject("eventInfo")
@@ -123,7 +123,7 @@ internal object MonopolyPatrolWorkflow {
                     pendingEvent = state.optJSONObject("eventInfo")
                     continue
                 }
-                Log.forest("新巡护当前无可用骰子，后续调度继续查询")
+                Log.forestPatrol("新巡护当前无可用骰子，后续调度继续查询")
                 return
             }
             val previousSteps = state.optJSONObject("userInfo")?.optInt("stepCount", -1) ?: -1
@@ -137,7 +137,7 @@ internal object MonopolyPatrolWorkflow {
                 return
             }
             tasksMayHaveChanged = true
-            Log.forest("新巡护掷骰🎲[${roll.optInt("diceNumber")}] 剩余${roll.optInt("totalDiceCount")}次")
+            Log.forestPatrol("新巡护掷骰🎲[${roll.optInt("diceNumber")}] 剩余${roll.optInt("totalDiceCount")}次")
             state = parsePatrolResponse(AntForestPatrolRpcCall.queryMonopolyEntryInfo())
             if (!ResChecker.checkRes(TAG, "刷新新巡护掷骰状态失败:", state)) return
             pendingEvent = pendingEvent ?: state.optJSONObject("eventInfo")
@@ -169,7 +169,7 @@ internal object MonopolyPatrolWorkflow {
         val pendingKey = "patrol_map_region"
         try {
             if (store.get(pendingKey, String::class.java).orEmpty().isNotBlank()) {
-                Log.forest("先恢复上次目录查询的巡护区域")
+                Log.forestPatrol("先恢复上次目录查询的巡护区域")
                 return
             }
             if (ApplicationHookConstants.isOffline() ||
@@ -252,7 +252,7 @@ internal object MonopolyPatrolWorkflow {
             val regions = page.getJSONArray("regionList")
             for (index in 0 until regions.length()) {
                 val region = regions.getJSONObject(index)
-                Log.forest("区域[${region.optString("regionName", region.optString("regionCode"))}]状态[${region.optString("regionAvailability")}]，进入${region.optInt("enteredMapCount")}/${region.optInt("totalMapCount")}张地图")
+                Log.forestPatrol("区域[${region.optString("regionName", region.optString("regionCode"))}]状态[${region.optString("regionAvailability")}]，进入${region.optInt("enteredMapCount")}/${region.optInt("totalMapCount")}张地图")
             }
             for (index in 0 until maps.length()) {
                 val map = maps.getJSONObject(index)
@@ -263,14 +263,14 @@ internal object MonopolyPatrolWorkflow {
                 }
                 val name = map.optJSONObject("displayInfo")?.optJSONObject("mapDisplay")?.optString("mapNameText")
                     ?.takeIf { it.isNotBlank() } ?: map.optString("mapCode")
-                Log.forest("地图[$name]${if (map.optBoolean("currentMap")) "（当前）" else ""}，状态[${map.optString("mapAvailability")}]，动物${map.opt("ownedCreatureCount")}/${map.opt("totalCreatureCount")}，满星$maxed，证书[${map.optString("certificateStatus")}]")
+                Log.forestPatrol("地图[$name]${if (map.optBoolean("currentMap")) "（当前）" else ""}，状态[${map.optString("mapAvailability")}]，动物${map.opt("ownedCreatureCount")}/${map.opt("totalCreatureCount")}，满星$maxed，证书[${map.optString("certificateStatus")}]")
             }
             for (rankType in listOf("TOTAL", "DAY")) {
                 try {
                     val ranking = parsePatrolResponse(AntForestPatrolRpcCall.queryMonopolyRanking(rankType))
                     if (!ResChecker.checkRes(TAG, "查询巡护排行失败[$rankType]:", ranking)) continue
                     if (ranking.optBoolean("degraded")) {
-                        Log.forest("巡护排行[$rankType]暂不可用")
+                        Log.forestPatrol("巡护排行[$rankType]暂不可用")
                         continue
                     }
                     val myself = ranking.optJSONObject("myself")
@@ -280,7 +280,7 @@ internal object MonopolyPatrolWorkflow {
                     }
                     val values = listOf("rank" to "名次", "stepCount" to "步数", "mapCount" to "证书", "medalCount" to "勋章")
                         .mapNotNull { (key, label) -> if (myself.has(key)) "$label${myself.getLong(key)}" else null }
-                    Log.forest("${if (rankType == "TOTAL") "累计" else "今日"}巡护排行：${values.joinToString("，")}")
+                    Log.forestPatrol("${if (rankType == "TOTAL") "累计" else "今日"}巡护排行：${values.joinToString("，")}")
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: InterruptedException) {
@@ -320,7 +320,7 @@ internal object MonopolyPatrolWorkflow {
                 }
                 val projectId = bindings[candidateCode]
                 if (projectId == null) {
-                    Log.forest("地图[$candidateCode]未下发明确的证书项目，保留后续查询")
+                    Log.forestPatrol("地图[$candidateCode]未下发明确的证书项目，保留后续查询")
                     continue
                 }
                 if (candidateCode != mapCode && bindings.any { (code, id) -> code != candidateCode && id == projectId }) {
@@ -333,7 +333,7 @@ internal object MonopolyPatrolWorkflow {
                         currentGuideUrl.isNotBlank() && currentMap?.optString("certificateStatus") == "OBTAINED" &&
                         bindings[mapCode] == projectId
                     ) {
-                        Log.forest("地图[$candidateCode]尚未解锁，锁定引导指向当前地图已获证书项目[$projectId]，等待解锁条件满足，不执行兑换")
+                        Log.forestPatrol("地图[$candidateCode]尚未解锁，锁定引导指向当前地图已获证书项目[$projectId]，等待解锁条件满足，不执行兑换")
                     } else {
                         Log.error(TAG, "地图[$candidateCode]证书链接与其他地图共用项目[$projectId]，未确认归属，不执行兑换")
                     }
@@ -359,7 +359,7 @@ internal object MonopolyPatrolWorkflow {
                     val confirmed = (0 until maps.length()).map { maps.getJSONObject(it) }
                         .firstOrNull { it.optString("mapCode") == candidateCode }
                     if (confirmed?.optString("certificateStatus") == "OBTAINED") {
-                        Log.forest("已确认获得地图[$candidateCode]保护证书")
+                        Log.forestPatrol("已确认获得地图[$candidateCode]保护证书")
                     } else {
                         Log.error(TAG, "地图[$candidateCode]证书回查尚未确认，不重复消耗")
                     }
@@ -388,7 +388,7 @@ internal object MonopolyPatrolWorkflow {
             .filter { it.optString("mapAvailability") == "AVAILABLE" && it.optString("mapCode").isNotBlank() && it.optInt("level", -1) > currentLevel }
             .maxByOrNull { it.getInt("level") }
         if (target == null) {
-            Log.forest("当前地图动物已全部满星，服务端未下发更新的已开放地图，保持当前地图")
+            Log.forestPatrol("当前地图动物已全部满星，服务端未下发更新的已开放地图，保持当前地图")
             return
         }
         val targetCode = target.getString("mapCode")
@@ -398,7 +398,7 @@ internal object MonopolyPatrolWorkflow {
         if (!ResChecker.checkRes(TAG, "回查巡护切图失败:", refreshed)) return
         val user = refreshed.optJSONObject("userInfo")
         if (user?.optString("currentMapCode") == targetCode && user.optString("currentRegionCode") == regionCode) {
-            Log.forest("巡护地图已切换[$mapCode → $targetCode]")
+            Log.forestPatrol("巡护地图已切换[$mapCode → $targetCode]")
         } else {
             Log.error(TAG, "巡护切图结果未确认，目标[$targetCode] raw=$refreshed")
         }
@@ -484,7 +484,7 @@ internal object MonopolyPatrolWorkflow {
 
         override fun actionKey(item: TaskFlowItem, action: TaskFlowAction): String =
             "${action.logName}:${item.sceneCode}:${item.id}:${item.status}:${item.progress}"
-        override fun logInfo(message: String) = Log.forest(message)
+        override fun logInfo(message: String) = Log.forestPatrol(message)
         override fun logError(message: String) = Log.error(TAG, message)
     }
 }

@@ -750,6 +750,7 @@ class ApplicationHook {
 
             if (!force && Status.hasFlagToday(StatusFlags.FLAG_FRIEND_CENTER_SYNC_TODAY)) {
                 val config = FriendRepository.current(safeUserId)
+                FriendRepository.refreshRelationsFromSnapshot(safeUserId) // [fork:friendheal:hook]
                 AccountSessionCoordinator.ensureActiveUserSnapshot(safeUserId, loader)
                 val message = "好友中心今日已刷新，跳过自动同步[$source]"
                 record(TAG, message)
