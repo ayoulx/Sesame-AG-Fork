@@ -352,7 +352,7 @@ class Config private constructor() {
                         Log.record(TAG, "格式化配置成功:$configV2File")
                         val formatted = toSaveStr()
                         if (formatted != null && formatted != json) {
-                            Log.record(TAG, "格式化配置: $userName")
+                            Log.record(TAG, "配置已重写: ${json.length} -> ${formatted.length} 字符") // [fork:logclean:config]
                             Files.write2File(formatted, configV2File)
                         }
                     }

@@ -79,7 +79,21 @@ internal object MonopolyPatrolWorkflow {
                 val confirmation = parsePatrolResponse(AntForestPatrolRpcCall.confirmMonopolyEvent(eventId, action))
                 if (!ResChecker.checkRes(TAG, "新巡护事件确认失败:", confirmation)) return
                 confirmedEvents.add(eventId)
-                Log.forestPatrol("新巡护事件完成[$eventId] 奖励=${confirmation.optJSONArray("eventResult") ?: JSONArray()}")
+                // 服务端的 eventResult 是整段带 <\/energy> 转义的结构，直接塞进日志没法看。
+                // 只留「拿了什么、多少能量」这一层。
+                val rewardArray = confirmation.optJSONArray("eventResult")
+                val rewardText =
+                    buildList {
+                        for (i in 0 until (rewardArray?.length() ?: 0)) {
+                            val reward = rewardArray?.optJSONObject(i) ?: continue
+                            val code =
+                                reward.optString("rewardCode").ifBlank { reward.optString("resultType") }
+                            if (code.isBlank()) continue
+                            val energy = reward.optJSONObject("triggerData")?.optInt("energy", 0) ?: 0
+                            add(if (energy > 0) "$code(+${energy}g)" else code)
+                        }
+                    }.joinToString("、").ifBlank { "无" }
+                Log.forestPatrol("新巡护事件完成[$eventId] 奖励=$rewardText")
                 state = parsePatrolResponse(AntForestPatrolRpcCall.queryMonopolyEntryInfo())
                 if (!ResChecker.checkRes(TAG, "刷新新巡护事件状态失败:", state)) return
                 pendingEvent = state.optJSONObject("eventInfo")

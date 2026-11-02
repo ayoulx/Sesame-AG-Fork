@@ -878,23 +878,31 @@ internal object GoldenBeanTreasureSupport {
         items: JSONArray,
         listType: String,
     ) {
+        // 一件商品一行、还带着一串 UNKNOWN，一次探测就能刷几十行；// [fork:logclean:mall]
+        // 真正决定「换不换」的只有可兑换数量和价格，所以压成一条汇总。
+        val available = mutableListOf<String>()
         for (index in 0 until items.length()) {
             val item = items.optJSONObject(index) ?: continue
+            val firstSku = item.optJSONArray("skuModelList")?.optJSONObject(0)
+            val itemOk = item.optString("itemStatus").equals("AVAILABLE", ignoreCase = true)
+            val skuOk = firstSku?.optString("skuRuleResult").equals("AVAILABLE", ignoreCase = true)
+            if (!itemOk && !skuOk) continue
             val itemId =
                 item.optString("spuId")
                     .ifBlank { item.optString("itemId") }
                     .ifBlank { item.optString("id") }
-            val firstSku = item.optJSONArray("skuModelList")?.optJSONObject(0)
-            val minPrice = item.optJSONObject("minPrice")
-            Log.goldenBean(
-                "金豆夺宝商城[${listType}只读] itemId=${itemId.ifBlank { "UNKNOWN" }} " +
-                    "itemStatus=${item.optString("itemStatus").ifBlank { "UNKNOWN" }} " +
-                    "skuId=${firstSku?.optString("skuId").orEmpty().ifBlank { "UNKNOWN" }} " +
-                    "skuStatus=${firstSku?.optString("skuRuleResult").orEmpty().ifBlank { "UNKNOWN" }} " +
-                    "stock=${item.optInt("remainStockCounts", -1)} " +
-                    "priceCent=${minPrice?.optInt("cent", -1)}",
-            )
+            val cent = item.optJSONObject("minPrice")?.optInt("cent", -1) ?: -1
+            val stock = item.optInt("remainStockCounts", -1)
+            available += "${itemId.ifBlank { "?" }}(${cent}分/剩${stock})"
         }
+        val summary =
+            if (available.isEmpty()) {
+                "金豆夺宝商城[$listType] 共 ${items.length()} 件，当前无可兑换商品"
+            } else {
+                "金豆夺宝商城[$listType] 共 ${items.length()} 件，可兑换 ${available.size} 件：" +
+                    available.joinToString("、")
+            }
+        Log.goldenBean(summary)
     }
 
     fun actionResult(
