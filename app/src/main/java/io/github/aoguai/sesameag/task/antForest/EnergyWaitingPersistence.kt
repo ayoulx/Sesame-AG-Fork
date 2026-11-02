@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.type.TypeReference
 import io.github.aoguai.sesameag.hook.AccountSessionCoordinator
 import io.github.aoguai.sesameag.util.FriendGuard
 import io.github.aoguai.sesameag.util.Log
+import io.github.aoguai.sesameag.util.LogFold // [fork:logfold:importpersist]
 import io.github.aoguai.sesameag.util.TimeUtil
 import io.github.aoguai.sesameag.util.UserDataStore
 import io.github.aoguai.sesameag.util.UserDataStoreManager
@@ -141,7 +142,7 @@ object EnergyWaitingPersistence {
                             "持久化同步：当前有效蹲点任务仍为${currentCount}个"
                     }
                     if (previousCount < 0 || currentCount != previousCount) {
-                        Log.forest("$statusText (uid: ${store.uid})")
+                        LogFold.tick("persist_sync", 20)?.let { Log.forest("$statusText (uid: ${store.uid})") } // [fork:logfold:sync]
                     } else {
                         Log.debug(TAG, "$statusText (uid: ${store.uid})")
                     }

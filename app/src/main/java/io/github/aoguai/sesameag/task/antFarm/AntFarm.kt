@@ -71,6 +71,7 @@ import io.github.aoguai.sesameag.util.GlobalThreadPools
 import io.github.aoguai.sesameag.util.LogChannel
 import io.github.aoguai.sesameag.util.JsonUtil
 import io.github.aoguai.sesameag.util.Log
+import io.github.aoguai.sesameag.util.LogFold // [fork:logfold:importfarm]
 import io.github.aoguai.sesameag.util.RandomUtil
 import io.github.aoguai.sesameag.util.ResChecker
 import io.github.aoguai.sesameag.util.RpcOfflineRisk
@@ -1199,7 +1200,9 @@ class AntFarm : ModelTask() {
                 sessionEpoch = AccountSessionCoordinator.currentSessionEpoch()
             )
             if (PersistentLaunchPolicy.isFrontLaunchDisabled(schedule.lastError)) {
-                Log.farm("庄园持久子任务[$group][$childId]已因禁止系统调度前台拉起目标应用降级为仅进程存活时等待，需手动打开目标应用后恢复")
+                LogFold.tick("schedule_downgraded", 20)?.let { total ->
+                    Log.farm("庄园持久子任务[$group][$childId]已降级为仅进程存活时等待" + LogFold.foldedTail(total))
+                } // [fork:logfold:farm]
             }
         } catch (t: Throwable) {
             Log.printStackTrace(TAG, "注册庄园持久子任务失败[$group][$childId]", t)

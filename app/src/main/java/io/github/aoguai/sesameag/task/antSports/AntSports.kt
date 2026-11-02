@@ -1186,7 +1186,9 @@ class AntSports : ModelTask() {
                 sessionEpoch = AccountSessionCoordinator.currentSessionEpoch()
             )
             if (PersistentLaunchPolicy.isFrontLaunchDisabled(schedule.lastError)) {
-                Log.sports("运动持久子任务[$group][$childId]已因禁止系统调度前台拉起目标应用降级为仅进程存活时等待，需手动打开目标应用后恢复")
+                LogFold.tick("schedule_downgraded", 20)?.let { total ->
+                    Log.sports("运动持久子任务[$group][$childId]已降级为仅进程存活时等待" + LogFold.foldedTail(total))
+                } // [fork:logfold:sports]
             }
             schedule.state == PersistentScheduleState.SCHEDULED
         } catch (t: Throwable) {

@@ -3376,7 +3376,7 @@ class AntForest : ModelTask(), EnergyCollectCallback {
                 Log.forest("    PK好友: [$userName$userId], 本轮已处理，跳过主页查询")
                 return
             }
-            Log.forest("  正在查询PK好友 [$userName$userId] 的主页...")
+            Log.runtime(TAG, "正在查询PK好友 [$userName$userId] 的主页") // [fork:logfold:querypk]
             collectEnergy(userId, queryFriendHome(userId, "PKContest"), "pk")
         } else { // 普通好友
             val needCollectEnergy = collectEnergy?.value == true && !jsonCollectMap.contains(userId)
@@ -3386,7 +3386,7 @@ class AntForest : ModelTask(), EnergyCollectCallback {
                 //   Log.forest("    普通好友: [$userName$userId], 所有条件不满足，跳过")
                 return
             }
-            Log.forest("  正在查询好友 [$userName$userId] 的主页...")
+            Log.runtime(TAG, "正在查询好友 [$userName$userId] 的主页") // [fork:logfold:queryfriend]
             val userHomeObj = collectEnergy(userId, queryFriendHome(userId, null), "friend")
             handleFriendExtraBenefits(userId, userHomeObj)
         }

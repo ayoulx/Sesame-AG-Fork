@@ -6,6 +6,7 @@ import io.github.aoguai.sesameag.hook.AccountSessionCoordinator
 import io.github.aoguai.sesameag.util.DataStore
 import io.github.aoguai.sesameag.util.Files
 import io.github.aoguai.sesameag.util.Log
+import io.github.aoguai.sesameag.util.LogFold // [fork:logfold:importregistry]
 import io.github.aoguai.sesameag.util.TimeUtil
 import org.json.JSONArray
 import org.json.JSONObject
@@ -69,7 +70,16 @@ object PersistentScheduleRegistry {
                 removed.forEach { SystemWakeScheduler.cancelLaunchConfirmationTimeout(it.id) }
                 SystemWakeScheduler.schedule(context, effectiveSchedule, silent = true)
             }
-            Log.record(TAG, "持久调度已因禁止系统调度前台拉起目标应用而未注册[${effectiveSchedule.name}]")
+            LogFold.tick("schedule_unregistered", 50)?.let { total ->
+                Log.record(
+                    TAG,
+                    if (total == 1) {
+                        "禁止系统调度前台拉起目标应用已开启，持久调度不会注册（同类提示每 50 个汇总一次）"
+                    } else {
+                        "持久调度仍未注册：累计 $total 个（禁止前台拉起）"
+                    },
+                )
+            } // [fork:logfold:registry]
             return effectiveSchedule.withFailure(prepared.blockedReason, now)
         }
         removed.firstOrNull { isSameScheduledTask(it, effectiveSchedule) }?.let { existing ->
