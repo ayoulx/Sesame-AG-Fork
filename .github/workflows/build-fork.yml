@@ -1,0 +1,120 @@
+name: Build Fork APK
+
+run-name: Build ${{ github.ref_name }} (${{ github.event_name }})
+
+on:
+  workflow_dispatch:
+    inputs:
+      all_abis:
+        description: "构建全部 ABI（默认只出 arm64-v8a）"
+        type: boolean
+        default: false
+      create_release:
+        description: "构建完成后发布 Release（默认不发）"
+        type: boolean
+        default: false
+  push:
+    branches:
+      - fork/0.1.9
+      - main
+    paths-ignore:
+      - "**/*.md"
+  pull_request:
+    branches:
+      - fork/0.1.9
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: "true"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          # versionCode 取提交数，必须是完整历史
+          fetch-depth: 0
+
+      - name: 准备 JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: 准备 Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: 准备 Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: 写入固定签名密钥
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          # 仓库里已带固定密钥；只有显式提供了 secret 时才用 secret 覆盖，保证两次来源一致时签名不变
+          if [ -n "${KEYSTORE_BASE64}" ]; then
+            echo "${KEYSTORE_BASE64}" | base64 -d > keystore/fork-release.p12
+            {
+              echo "storeFile=keystore/fork-release.p12"
+              echo "storePassword=${KEYSTORE_PASSWORD}"
+              echo "keyAlias=${KEY_ALIAS}"
+              echo "keyPassword=${KEY_PASSWORD}"
+            } > keystore/fork-release.properties
+            echo "已使用仓库 secret 中的签名配置"
+          else
+            echo "使用仓库内置的固定签名配置"
+          fi
+
+      - name: 应用补丁并自检
+        run: bash customizations/verify.sh
+
+      - name: 构建 release
+        run: |
+          if [ "${{ inputs.all_abis }}" = "true" ]; then
+            ./gradlew --no-daemon :app:assembleRelease -PforkAbis=all
+          else
+            ./gradlew --no-daemon :app:assembleRelease -PforkAbis=arm64-v8a
+          fi
+
+      - name: 校验产物
+        run: |
+          set -euo pipefail
+          ls -lh app/build/outputs/apk/release/*.apk
+          for apk in app/build/outputs/apk/release/*.apk; do
+            "$ANDROID_HOME/build-tools/37.0.0/apksigner" verify --print-certs "$apk" >/dev/null
+            echo "签名校验通过: $(basename "$apk")"
+          done
+
+      - name: 上传产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: sesame-apk-${{ github.run_number }}
+          path: app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+
+      - name: 发布 Release
+        if: ${{ inputs.create_release == true }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          VERSION=$(grep -E '^appVersion=' gradle.properties | cut -d= -f2)
+          CODE=$(git rev-list --count HEAD)
+          TAG="v${VERSION}-${CODE}"
+          NOTES=$(printf '构建时间：%s\n提交：%s\n' "$(date -u '+%Y-%m-%d %H:%M UTC')" "${GITHUB_SHA::7}")
+          gh release create "$TAG" app/build/outputs/apk/release/*.apk \
+            --title "$VERSION ($CODE)" \
+            --notes "$NOTES" \
+            --target "$GITHUB_SHA"

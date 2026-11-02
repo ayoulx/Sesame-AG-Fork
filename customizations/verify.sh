@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+# 自检：从上游基线出发打一遍补丁，逐项断言后再决定是否编译。
+#
+#   ./customizations/verify.sh            # 静态自检
+#   ./customizations/verify.sh --build    # 静态自检 + 编译
+#
+# 断言内容：
+#   1) 补丁从干净基线可完整应用；
+#   2) 重复执行不产生任何字节变化（幂等）；
+#   3) 改动文件集合与补丁声明完全一致（不误伤上游）；
+#   4) 行尾风格无损（CRLF 文件仍是 CRLF）；
+#   5) 每个 [fork:tag:name] 标记各出现一次；
+#   6) Kotlin 结构括号配平、无 TODO 占位、无未引用的 payload。
+set -uo pipefail
+
+cd "$(dirname "$0")/.."
+ROOT=$(pwd)
+
+BUILD=0
+if [ "${1:-}" = "--build" ]; then
+  BUILD=1
+fi
+
+fail() {
+  echo
+  echo "自检失败：$1"
+  exit 1
+}
+
+echo "== 1/4 还原上游基线 =="
+if [ -d customizations/.state ]; then
+  while IFS= read -r created; do
+    [ -n "$created" ] && [ -f "$created" ] && rm -f "$created"
+  done < <(cat customizations/.state/created-*.txt 2>/dev/null)
+fi
+rm -rf customizations/.state
+git checkout -- . || fail "无法还原被修改的上游文件"
+git ls-files --others --exclude-standard -- app/src | while IFS= read -r extra; do
+  case "$extra" in
+    */hook/captcha/*|*/util/ModuleSwitches.kt|*/content/CaptchaToolSection.kt) rm -f "$extra" ;;
+  esac
+done
+echo "   基线已还原"
+python customizations/checks.py snapshot || fail "无法记录行尾基线"
+
+echo "== 2/4 应用补丁（第一遍） =="
+bash customizations/apply.sh || fail "补丁应用失败"
+mkdir -p customizations/.state
+{
+  while IFS= read -r file; do
+    [ -n "$file" ] && [ -f "$file" ] && sha256sum "$file"
+  done < <(cat customizations/.state/touched-*.txt 2>/dev/null)
+} > customizations/.state/hashes.txt
+echo "   已记录 $(wc -l < customizations/.state/hashes.txt) 个文件的哈希"
+
+echo "== 3/4 重复应用（第二遍，应无写入） =="
+second=$(bash customizations/apply.sh) || fail "补丁第二遍执行失败"
+echo "$second" | sed 's/^/   /'
+if echo "$second" | grep -q "写入 [1-9]"; then
+  fail "补丁非幂等：第二遍仍写入了内容"
+fi
+
+echo "== 4/4 结构断言 =="
+python customizations/checks.py || fail "结构断言未通过"
+
+if [ "$BUILD" = "1" ]; then
+  echo
+  echo "== 编译校验 =="
+  ./gradlew --no-daemon :app:compileDebugKotlin || fail "编译失败"
+  echo "   编译通过"
+fi
+
+echo
+echo "全部自检通过（$ROOT）"

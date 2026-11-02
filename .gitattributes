@@ -1,0 +1,7 @@
+# fork 自身的脚本与工作流固定 LF：Windows 上编辑器/工具链容易写成 CRLF，
+# 而 CI 在 Linux 里执行，CRLF 的 shebang 会直接跑不起来。
+customizations/**/*.sh text eol=lf
+customizations/**/*.py text eol=lf
+.github/workflows/*.yml text eol=lf
+
+# 上游源码保持仓库原有约定（core.autocrlf 决定工作区行尾），这里不干预。
