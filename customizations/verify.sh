@@ -51,9 +51,11 @@ echo "== 2/4 应用补丁（第一遍） =="
 bash customizations/apply.sh || fail "补丁应用失败"
 mkdir -p customizations/.state
 {
+  # 改动 + 新增都要进快照：新增文件在文件已存在时只会记进 created，
+  # 只快照 touched 会让幂等断言漏掉一半文件。
   while IFS= read -r file; do
     [ -n "$file" ] && [ -f "$file" ] && sha256sum "$file"
-  done < <(cat customizations/.state/touched-*.txt 2>/dev/null)
+  done < <(cat customizations/.state/touched-*.txt customizations/.state/created-*.txt 2>/dev/null | sort -u)
 } > customizations/.state/hashes.txt
 echo "   已记录 $(wc -l < customizations/.state/hashes.txt) 个文件的哈希"
 

@@ -60,13 +60,24 @@ def created() -> set[str]:
     return result
 
 
+def declared() -> set[str]:
+    """补丁声明会改动的全部文件：改过的 + 新增的。
+
+    单看 touched 会漏：新增文件在「首次创建」时会被同时记进 touched，
+    但文件已经存在时走跳过分支只记 created。于是同样一套补丁，
+    本地（文件不存在，首次创建）得到 36 个文件、CI（文件已在仓库里）
+    只得到 18 个，断言结果随起点漂移。声明集合必须两者取并。
+    """
+    return touched() | created()
+
+
 def check_scope() -> tuple[bool, list[str]]:
     """补丁动过的文件必须与「相对上游基线」的实际差异完全一致（不多不少）。
 
     不能拿 git status 当准绳：补丁产物本身也在版本库里（为了可复现构建），
     提交之后 status 就看不到它们了。这里改为与基线 tag 做 diff。
     """
-    expected = touched()
+    expected = declared()
     base = os.environ.get("FORK_BASE_TAG", BASE_TAG)
     actual: set[str] = set()
     for line in _run(["git", "diff", "--name-only", base, "--", "app/"]).splitlines():
@@ -119,7 +130,7 @@ def _hash_manifest() -> dict[str, str]:
     import hashlib
 
     entries = {}
-    for rel in sorted(touched()):
+    for rel in sorted(declared()):
         path = os.path.join(ROOT, rel)
         if not os.path.isfile(path):
             entries[rel] = "<missing>"
