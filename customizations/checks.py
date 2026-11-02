@@ -17,6 +17,9 @@ PATCHES = os.path.join(ROOT, "customizations", "patches")
 
 TEXTUAL_SUFFIXES = (".kt", ".kts", ".xml", ".yml", ".yaml", ".pro", ".toml")
 
+# 补丁的对账基线必须是上游 tag，而不是 HEAD（HEAD 里已含补丁产物）。
+BASE_TAG = "4204-0.1.9"
+
 # 占位符只认「注释里的 TODO/FIXME/XXX」与 Kotlin 的 TODO() 调用；
 # 任务状态字面量（"TODO" -> ...）是业务值，不能算占位。
 PLACEHOLDER = re.compile(r"(?://|#|/\*|\*)\s*(?:TODO|FIXME|XXX)\b|\bTODO\(")
@@ -58,18 +61,23 @@ def created() -> set[str]:
 
 
 def check_scope() -> tuple[bool, list[str]]:
-    """补丁动过的文件必须与 git 报告完全一致（不多不少）。"""
+    """补丁动过的文件必须与「相对上游基线」的实际差异完全一致（不多不少）。
+
+    不能拿 git status 当准绳：补丁产物本身也在版本库里（为了可复现构建），
+    提交之后 status 就看不到它们了。这里改为与基线 tag 做 diff。
+    """
     expected = touched()
-    raw = _run(["git", "status", "--porcelain", "--untracked-files=all"])
+    base = os.environ.get("FORK_BASE_TAG", BASE_TAG)
     actual: set[str] = set()
-    for line in raw.splitlines():
-        path = line[3:].strip()
-        if " -> " in path:
-            path = path.split(" -> ", 1)[1].strip()
+    for line in _run(["git", "diff", "--name-only", base, "--", "app/"]).splitlines():
+        path = line.strip()
         # fork 自身的基础设施不属于「补丁改动」的范畴
-        if path.startswith(ORCHESTRATION_PREFIXES):
-            continue
-        actual.add(path)
+        if path and not path.startswith(ORCHESTRATION_PREFIXES):
+            actual.add(path)
+    for line in _run(["git", "ls-files", "--others", "--exclude-standard", "--", "app/"]).splitlines():
+        path = line.strip()
+        if path and not path.startswith(ORCHESTRATION_PREFIXES):
+            actual.add(path)
 
     ok = expected == actual
     lines = []

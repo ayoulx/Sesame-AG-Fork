@@ -34,13 +34,17 @@ if [ -d customizations/.state ]; then
   done < <(cat customizations/.state/created-*.txt 2>/dev/null)
 fi
 rm -rf customizations/.state
-# 只还原补丁会碰的目录：customizations/ 自身是补丁基础设施，不能被这里回滚掉。
-git checkout -- app/ || fail "无法还原被修改的上游文件"
+# 基线指向上游 tag，而不是 HEAD：补丁产物本身也在版本库里（为了可复现构建），
+# 用 HEAD 当基线会让补丁全部命中标记而跳过，自检就变成空转。
+# customizations/ 自身是补丁基础设施，这里不回滚。
+BASE_TAG="${FORK_BASE_TAG:-4204-0.1.9}"
+git rev-parse -q --verify "refs/tags/$BASE_TAG" >/dev/null || fail "基线 tag 不存在: $BASE_TAG"
+git checkout "$BASE_TAG" -- app/ || fail "无法还原上游基线 $BASE_TAG"
 # app/src 下所有未跟踪文件都是补丁产物（payload 落盘），一并清理，避免维护白名单。
 git ls-files --others --exclude-standard -- app/src | while IFS= read -r extra; do
   rm -f "$extra"
 done
-echo "   基线已还原"
+echo "   基线已还原（$BASE_TAG）"
 python customizations/checks.py snapshot || fail "无法记录行尾基线"
 
 echo "== 2/4 应用补丁（第一遍） =="
